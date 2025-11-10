@@ -144,8 +144,12 @@ public class AuthenticationFrame extends JFrame {
         
         // Test credentials
         gbc.gridy = 4; gbc.insets = new Insets(10, 10, 10, 10);
-        JLabel testLabel = new JLabel("<html><center><b>Test Credentials:</b><br>Customer: aanchal01/pass123<br>Vendor: vendor01/vendor123</center></html>");
-        testLabel.setFont(new Font("Arial", Font.PLAIN, 11));
+        JLabel testLabel = new JLabel("<html><center><b>Test Credentials:</b><br>" +
+            "Customer: aanchal01/pass123<br>" +
+            "Vendors: vendor01/vendor123, vendor02/vendor456<br>" +
+            "vendor03/health123, vendor04/guard456<br>" +
+            "vendor05/net789, vendor06/onemg321, vendor07/easy654</center></html>");
+        testLabel.setFont(new Font("Arial", Font.PLAIN, 10));
         testLabel.setForeground(new Color(100, 100, 100));
         panel.add(testLabel, gbc);
         
@@ -449,12 +453,18 @@ public class AuthenticationFrame extends JFrame {
                 }
             } else if ("Vendor".equals(userType)) {
                 System.out.println("Vendor type selected, checking credentials...");
-                if ("vendor01".equals(userId) && "vendor123".equals(password)) {
-                    System.out.println("✓ vendor01 credentials match!");
+                if (("vendor01".equals(userId) && "vendor123".equals(password)) ||
+                    ("vendor02".equals(userId) && "vendor456".equals(password)) ||
+                    ("vendor03".equals(userId) && "health123".equals(password)) ||
+                    ("vendor04".equals(userId) && "guard456".equals(password)) ||
+                    ("vendor05".equals(userId) && "net789".equals(password)) ||
+                    ("vendor06".equals(userId) && "onemg321".equals(password)) ||
+                    ("vendor07".equals(userId) && "easy654".equals(password))) {
+                    System.out.println("✓ Vendor credentials match for: " + userId);
                     return true;
                 } else {
                     System.out.println("✗ Vendor credentials don't match");
-                    System.out.println("Expected: vendor01/vendor123");
+                    System.out.println("Available vendors: vendor01-07 with respective passwords");
                 }
             } else {
                 System.out.println("Unknown user type: " + userType);

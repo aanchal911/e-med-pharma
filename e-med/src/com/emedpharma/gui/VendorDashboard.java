@@ -427,7 +427,7 @@ public class VendorDashboard extends JFrame {
         inventoryPanel.setBackground(LIGHT_GRAY);
         inventoryPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
         
-        JLabel titleLabel = new JLabel("Inventory Management");
+        JLabel titleLabel = new JLabel("My Inventory Management");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
         titleLabel.setForeground(DARK_TEXT);
         
@@ -445,31 +445,330 @@ public class VendorDashboard extends JFrame {
         headerPanel.add(titleLabel, BorderLayout.WEST);
         headerPanel.add(addMedicineBtn, BorderLayout.EAST);
         
-        // Inventory Table
-        String[] columnNames = {"Medicine Name", "Category", "Stock", "Price", "Expiry Date", "Actions"};
-        Object[][] data = {
-            {"Paracetamol 500mg", "Pain Relief", "250", "Rs.25", "2025-12-31", "Edit | Delete"},
-            {"Crocin Advance", "Fever", "180", "Rs.35", "2025-10-15", "Edit | Delete"},
-            {"Dolo 650", "Pain Relief", "120", "Rs.30", "2025-11-20", "Edit | Delete"},
-            {"Aspirin 75mg", "Heart Health", "90", "Rs.45", "2025-09-10", "Edit | Delete"}
-        };
+        // Load real inventory from database
+        JPanel inventoryGrid = new JPanel(new GridLayout(0, 2, 20, 20));
+        inventoryGrid.setBackground(LIGHT_GRAY);
         
-        JTable inventoryTable = new JTable(data, columnNames);
-        inventoryTable.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        inventoryTable.setRowHeight(30);
-        inventoryTable.getTableHeader().setBackground(LIGHT_GREEN);
-        inventoryTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
+        loadVendorInventory(inventoryGrid);
         
-        JScrollPane tableScrollPane = new JScrollPane(inventoryTable);
-        tableScrollPane.setBorder(BorderFactory.createLineBorder(new Color(230, 230, 230)));
+        JScrollPane scrollPane = new JScrollPane(inventoryGrid);
+        scrollPane.setBorder(null);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
         
         inventoryPanel.add(headerPanel, BorderLayout.NORTH);
         inventoryPanel.add(Box.createVerticalStrut(20), BorderLayout.CENTER);
-        inventoryPanel.add(tableScrollPane, BorderLayout.CENTER);
+        inventoryPanel.add(scrollPane, BorderLayout.CENTER);
         
         mainContentPanel.add(inventoryPanel, BorderLayout.CENTER);
         mainContentPanel.revalidate();
         mainContentPanel.repaint();
+    }
+    
+    private void loadVendorInventory(JPanel inventoryGrid) {
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+            Connection conn = DriverManager.getConnection(
+                "jdbc:mysql://localhost:3306/drugdatabase?useSSL=false&allowPublicKeyRetrieval=true", 
+                "root", "A@nchal911");
+            
+            String query = "SELECT p.pid, p.pname, p.manufacturer, p.price, i.quantity " +
+                          "FROM product p JOIN inventory i ON p.pid = i.pid " +
+                          "WHERE i.sid = ?";
+            
+            PreparedStatement ps = conn.prepareStatement(query);
+            ps.setString(1, currentVendor);
+            ResultSet rs = ps.executeQuery();
+            
+            while (rs.next()) {
+                JPanel productCard = createInventoryCard(
+                    rs.getString("pid"),
+                    rs.getString("pname"),
+                    rs.getString("manufacturer"),
+                    rs.getDouble("price"),
+                    rs.getInt("quantity")
+                );
+                inventoryGrid.add(productCard);
+            }
+            
+            conn.close();
+            
+        } catch (Exception e) {
+            System.out.println("Error loading inventory: " + e.getMessage());
+            // Add sample inventory cards if database fails
+            addSampleInventoryCards(inventoryGrid);
+        }
+    }
+    
+    private void addSampleInventoryCards(JPanel inventoryGrid) {
+        String[][] sampleProducts = {
+            {"MED001", "Paracetamol 500mg", "Generic", "25.0", "250"},
+            {"MED002", "Crocin Advance", "GSK", "35.0", "180"},
+            {"MED003", "Dolo 650", "Micro Labs", "30.0", "120"},
+            {"MED004", "Aspirin 75mg", "Bayer", "45.0", "90"}
+        };
+        
+        for (String[] product : sampleProducts) {
+            JPanel productCard = createInventoryCard(
+                product[0], product[1], product[2], 
+                Double.parseDouble(product[3]), Integer.parseInt(product[4])
+            );
+            inventoryGrid.add(productCard);
+        }
+    }
+    
+    private JPanel createInventoryCard(String pid, String name, String manufacturer, double price, int stock) {
+        JPanel card = new JPanel(new BorderLayout());
+        card.setBackground(Color.WHITE);
+        card.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(230, 230, 230)),
+            new EmptyBorder(20, 20, 20, 20)));
+        
+        JPanel infoPanel = new JPanel();
+        infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
+        infoPanel.setBackground(Color.WHITE);
+        
+        JLabel nameLabel = new JLabel(name);
+        nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        nameLabel.setForeground(DARK_TEXT);
+        
+        JLabel manufacturerLabel = new JLabel("By " + manufacturer);
+        manufacturerLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        manufacturerLabel.setForeground(new Color(100, 100, 100));
+        
+        JLabel priceLabel = new JLabel("Rs." + price);
+        priceLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        priceLabel.setForeground(ACCENT_GREEN);
+        
+        JLabel stockLabel = new JLabel("Stock: " + stock + " units");
+        stockLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        stockLabel.setForeground(stock > 50 ? SUCCESS_COLOR : stock > 10 ? WARNING_COLOR : DANGER_COLOR);
+        
+        infoPanel.add(nameLabel);
+        infoPanel.add(Box.createVerticalStrut(5));
+        infoPanel.add(manufacturerLabel);
+        infoPanel.add(Box.createVerticalStrut(10));
+        infoPanel.add(priceLabel);
+        infoPanel.add(Box.createVerticalStrut(5));
+        infoPanel.add(stockLabel);
+        
+        // Action buttons
+        JPanel buttonPanel = new JPanel(new FlowLayout());
+        buttonPanel.setBackground(Color.WHITE);
+        
+        JButton updateStockBtn = new JButton("Update Stock");
+        updateStockBtn.setBackground(new Color(102, 126, 234));
+        updateStockBtn.setForeground(Color.WHITE);
+        updateStockBtn.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        updateStockBtn.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
+        updateStockBtn.setFocusPainted(false);
+        updateStockBtn.addActionListener(e -> showUpdateStockDialog(pid, name, stock));
+        
+        JButton updatePriceBtn = new JButton("Update Price");
+        updatePriceBtn.setBackground(WARNING_COLOR);
+        updatePriceBtn.setForeground(Color.WHITE);
+        updatePriceBtn.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        updatePriceBtn.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
+        updatePriceBtn.setFocusPainted(false);
+        updatePriceBtn.addActionListener(e -> showUpdatePriceDialog(pid, name, price));
+        
+        buttonPanel.add(updateStockBtn);
+        buttonPanel.add(updatePriceBtn);
+        
+        card.add(infoPanel, BorderLayout.CENTER);
+        card.add(buttonPanel, BorderLayout.SOUTH);
+        
+        return card;
+    }
+    
+    private void showUpdateStockDialog(String pid, String productName, int currentStock) {
+        JDialog stockDialog = new JDialog(this, "Update Stock - " + productName, true);
+        stockDialog.setSize(400, 250);
+        stockDialog.setLocationRelativeTo(this);
+        
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setBackground(Color.WHITE);
+        mainPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+        
+        JLabel titleLabel = new JLabel("Update Stock for: " + productName);
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        
+        JPanel formPanel = new JPanel(new GridLayout(3, 2, 10, 10));
+        formPanel.setBackground(Color.WHITE);
+        formPanel.setBorder(new EmptyBorder(20, 0, 20, 0));
+        
+        formPanel.add(new JLabel("Current Stock:"));
+        formPanel.add(new JLabel(String.valueOf(currentStock) + " units"));
+        
+        formPanel.add(new JLabel("New Stock Quantity:"));
+        JTextField newStockField = new JTextField(String.valueOf(currentStock));
+        styleTextField(newStockField);
+        formPanel.add(newStockField);
+        
+        JPanel buttonPanel = new JPanel(new FlowLayout());
+        buttonPanel.setBackground(Color.WHITE);
+        
+        JButton updateBtn = new JButton("Update Stock");
+        updateBtn.setBackground(ACCENT_GREEN);
+        updateBtn.setForeground(Color.WHITE);
+        updateBtn.addActionListener(e -> {
+            try {
+                int newStock = Integer.parseInt(newStockField.getText());
+                updateProductStock(pid, newStock);
+                JOptionPane.showMessageDialog(stockDialog, "Stock updated successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                stockDialog.dispose();
+                showInventoryManagement(); // Refresh
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(stockDialog, "Please enter a valid number!", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+        
+        JButton cancelBtn = new JButton("Cancel");
+        cancelBtn.addActionListener(e -> stockDialog.dispose());
+        
+        buttonPanel.add(updateBtn);
+        buttonPanel.add(cancelBtn);
+        
+        mainPanel.add(titleLabel, BorderLayout.NORTH);
+        mainPanel.add(formPanel, BorderLayout.CENTER);
+        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+        
+        stockDialog.add(mainPanel);
+        stockDialog.setVisible(true);
+    }
+    
+    private void showUpdatePriceDialog(String pid, String productName, double currentPrice) {
+        JDialog priceDialog = new JDialog(this, "Update Price - " + productName, true);
+        priceDialog.setSize(400, 300);
+        priceDialog.setLocationRelativeTo(this);
+        
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setBackground(Color.WHITE);
+        mainPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+        
+        JLabel titleLabel = new JLabel("Update Price for: " + productName);
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        
+        JPanel formPanel = new JPanel(new GridLayout(4, 2, 10, 10));
+        formPanel.setBackground(Color.WHITE);
+        formPanel.setBorder(new EmptyBorder(20, 0, 20, 0));
+        
+        formPanel.add(new JLabel("Current Price:"));
+        formPanel.add(new JLabel("Rs." + currentPrice));
+        
+        formPanel.add(new JLabel("New Price (Rs.):"));
+        JTextField newPriceField = new JTextField(String.valueOf(currentPrice));
+        styleTextField(newPriceField);
+        formPanel.add(newPriceField);
+        
+        formPanel.add(new JLabel("Discount (%):"));
+        JTextField discountField = new JTextField("0");
+        styleTextField(discountField);
+        formPanel.add(discountField);
+        
+        JLabel finalPriceLabel = new JLabel("Final Price: Rs." + currentPrice);
+        finalPriceLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        finalPriceLabel.setForeground(ACCENT_GREEN);
+        formPanel.add(new JLabel("Final Price:"));
+        formPanel.add(finalPriceLabel);
+        
+        // Update final price when discount changes
+        discountField.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyReleased(java.awt.event.KeyEvent evt) {
+                try {
+                    double price = Double.parseDouble(newPriceField.getText());
+                    double discount = Double.parseDouble(discountField.getText());
+                    double finalPrice = price - (price * discount / 100);
+                    finalPriceLabel.setText("Rs." + String.format("%.2f", finalPrice));
+                } catch (NumberFormatException e) {
+                    finalPriceLabel.setText("Rs." + currentPrice);
+                }
+            }
+        });
+        
+        JPanel buttonPanel = new JPanel(new FlowLayout());
+        buttonPanel.setBackground(Color.WHITE);
+        
+        JButton updateBtn = new JButton("Update Price");
+        updateBtn.setBackground(ACCENT_GREEN);
+        updateBtn.setForeground(Color.WHITE);
+        updateBtn.addActionListener(e -> {
+            try {
+                double newPrice = Double.parseDouble(newPriceField.getText());
+                double discount = Double.parseDouble(discountField.getText());
+                double finalPrice = newPrice - (newPrice * discount / 100);
+                
+                updateProductPrice(pid, finalPrice);
+                JOptionPane.showMessageDialog(priceDialog, 
+                    "Price updated successfully!\nNew Price: Rs." + String.format("%.2f", finalPrice), 
+                    "Success", JOptionPane.INFORMATION_MESSAGE);
+                priceDialog.dispose();
+                showInventoryManagement(); // Refresh
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(priceDialog, "Please enter valid numbers!", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+        
+        JButton cancelBtn = new JButton("Cancel");
+        cancelBtn.addActionListener(e -> priceDialog.dispose());
+        
+        buttonPanel.add(updateBtn);
+        buttonPanel.add(cancelBtn);
+        
+        mainPanel.add(titleLabel, BorderLayout.NORTH);
+        mainPanel.add(formPanel, BorderLayout.CENTER);
+        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+        
+        priceDialog.add(mainPanel);
+        priceDialog.setVisible(true);
+    }
+    
+    private void updateProductStock(String pid, int newStock) {
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+            Connection conn = DriverManager.getConnection(
+                "jdbc:mysql://localhost:3306/drugdatabase?useSSL=false&allowPublicKeyRetrieval=true", 
+                "root", "A@nchal911");
+            
+            String query = "UPDATE inventory SET quantity = ? WHERE pid = ? AND sid = ?";
+            PreparedStatement ps = conn.prepareStatement(query);
+            ps.setInt(1, newStock);
+            ps.setString(2, pid);
+            ps.setString(3, currentVendor);
+            
+            ps.executeUpdate();
+            conn.close();
+            
+            System.out.println("Stock updated for product: " + pid + " to " + newStock);
+            
+        } catch (Exception e) {
+            System.out.println("Error updating stock: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    private void updateProductPrice(String pid, double newPrice) {
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+            Connection conn = DriverManager.getConnection(
+                "jdbc:mysql://localhost:3306/drugdatabase?useSSL=false&allowPublicKeyRetrieval=true", 
+                "root", "A@nchal911");
+            
+            String query = "UPDATE product SET price = ? WHERE pid = ?";
+            PreparedStatement ps = conn.prepareStatement(query);
+            ps.setDouble(1, newPrice);
+            ps.setString(2, pid);
+            
+            ps.executeUpdate();
+            conn.close();
+            
+            System.out.println("Price updated for product: " + pid + " to Rs." + newPrice);
+            
+        } catch (Exception e) {
+            System.out.println("Error updating price: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
     
     private void showOrderManagement() {
@@ -479,34 +778,189 @@ public class VendorDashboard extends JFrame {
         ordersPanel.setBackground(LIGHT_GRAY);
         ordersPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
         
-        JLabel titleLabel = new JLabel("Order Management");
+        JLabel titleLabel = new JLabel("Order Management - Approve/Reject Orders");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
         titleLabel.setForeground(DARK_TEXT);
         
-        // Orders Table
-        String[] columnNames = {"Order ID", "Customer", "Items", "Amount", "Status", "Date", "Actions"};
-        Object[][] data = {
-            {"ORD001", "aanchal01", "Paracetamol, Crocin", "Rs.60", "Pending", "2024-01-22", "Process | Cancel"},
-            {"ORD002", "shagun02", "Dolo 650", "Rs.30", "Processing", "2024-01-22", "Ship | Cancel"},
-            {"ORD003", "dhara03", "Aspirin", "Rs.45", "Shipped", "2024-01-21", "Track | View"}
-        };
+        // Load real orders from database
+        JPanel ordersGrid = new JPanel();
+        ordersGrid.setLayout(new BoxLayout(ordersGrid, BoxLayout.Y_AXIS));
+        ordersGrid.setBackground(LIGHT_GRAY);
         
-        JTable ordersTable = new JTable(data, columnNames);
-        ordersTable.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        ordersTable.setRowHeight(35);
-        ordersTable.getTableHeader().setBackground(LIGHT_GREEN);
-        ordersTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
+        loadVendorOrders(ordersGrid);
         
-        JScrollPane tableScrollPane = new JScrollPane(ordersTable);
-        tableScrollPane.setBorder(BorderFactory.createLineBorder(new Color(230, 230, 230)));
+        JScrollPane scrollPane = new JScrollPane(ordersGrid);
+        scrollPane.setBorder(null);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
         
         ordersPanel.add(titleLabel, BorderLayout.NORTH);
         ordersPanel.add(Box.createVerticalStrut(20), BorderLayout.CENTER);
-        ordersPanel.add(tableScrollPane, BorderLayout.CENTER);
+        ordersPanel.add(scrollPane, BorderLayout.CENTER);
         
         mainContentPanel.add(ordersPanel, BorderLayout.CENTER);
         mainContentPanel.revalidate();
         mainContentPanel.repaint();
+    }
+    
+    private void loadVendorOrders(JPanel ordersGrid) {
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+            Connection conn = DriverManager.getConnection(
+                "jdbc:mysql://localhost:3306/drugdatabase?useSSL=false&allowPublicKeyRetrieval=true", 
+                "root", "A@nchal911");
+            
+            String query = "SELECT o.oid, o.uid, p.pname, o.quantity, o.price, o.status, o.order_date " +
+                          "FROM orders o JOIN product p ON o.pid = p.pid " +
+                          "WHERE o.sid = ? ORDER BY o.order_date DESC";
+            
+            PreparedStatement ps = conn.prepareStatement(query);
+            ps.setString(1, currentVendor);
+            ResultSet rs = ps.executeQuery();
+            
+            while (rs.next()) {
+                JPanel orderCard = createOrderCard(
+                    rs.getInt("oid"),
+                    rs.getString("uid"),
+                    rs.getString("pname"),
+                    rs.getInt("quantity"),
+                    rs.getDouble("price"),
+                    rs.getString("status"),
+                    rs.getString("order_date")
+                );
+                ordersGrid.add(orderCard);
+                ordersGrid.add(Box.createVerticalStrut(10));
+            }
+            
+            conn.close();
+            
+        } catch (Exception e) {
+            System.out.println("Error loading orders: " + e.getMessage());
+            // Add sample orders if database fails
+            addSampleOrderCards(ordersGrid);
+        }
+    }
+    
+    private void addSampleOrderCards(JPanel ordersGrid) {
+        Object[][] sampleOrders = {
+            {1, "aanchal01", "Paracetamol 500mg", 2, 50.0, "Pending", "2024-01-22"},
+            {2, "shagun02", "Crocin Advance", 1, 35.0, "Pending", "2024-01-22"},
+            {3, "dhara03", "Dolo 650", 1, 30.0, "Approved", "2024-01-21"}
+        };
+        
+        for (Object[] order : sampleOrders) {
+            JPanel orderCard = createOrderCard(
+                (Integer) order[0], (String) order[1], (String) order[2], 
+                (Integer) order[3], (Double) order[4], (String) order[5], (String) order[6]
+            );
+            ordersGrid.add(orderCard);
+            ordersGrid.add(Box.createVerticalStrut(10));
+        }
+    }
+    
+    private JPanel createOrderCard(int orderId, String customerId, String productName, 
+                                  int quantity, double price, String status, String date) {
+        JPanel card = new JPanel(new BorderLayout());
+        card.setBackground(Color.WHITE);
+        card.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(230, 230, 230)),
+            new EmptyBorder(20, 20, 20, 20)));
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 120));
+        
+        // Order Info
+        JPanel infoPanel = new JPanel();
+        infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
+        infoPanel.setBackground(Color.WHITE);
+        
+        JLabel orderLabel = new JLabel("Order #" + orderId + " - " + customerId);
+        orderLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        orderLabel.setForeground(DARK_TEXT);
+        
+        JLabel productLabel = new JLabel(productName + " (Qty: " + quantity + ")");
+        productLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        productLabel.setForeground(new Color(100, 100, 100));
+        
+        JLabel priceLabel = new JLabel("Total: Rs." + price);
+        priceLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        priceLabel.setForeground(ACCENT_GREEN);
+        
+        JLabel statusLabel = new JLabel("Status: " + status);
+        statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        Color statusColor = status.equals("Pending") ? WARNING_COLOR : 
+                           status.equals("Approved") ? SUCCESS_COLOR : DANGER_COLOR;
+        statusLabel.setForeground(statusColor);
+        
+        infoPanel.add(orderLabel);
+        infoPanel.add(Box.createVerticalStrut(5));
+        infoPanel.add(productLabel);
+        infoPanel.add(Box.createVerticalStrut(5));
+        infoPanel.add(priceLabel);
+        infoPanel.add(Box.createVerticalStrut(5));
+        infoPanel.add(statusLabel);
+        
+        // Action buttons
+        JPanel buttonPanel = new JPanel(new FlowLayout());
+        buttonPanel.setBackground(Color.WHITE);
+        
+        if ("Pending".equals(status)) {
+            JButton approveBtn = new JButton("Approve");
+            approveBtn.setBackground(SUCCESS_COLOR);
+            approveBtn.setForeground(Color.WHITE);
+            approveBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            approveBtn.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
+            approveBtn.setFocusPainted(false);
+            approveBtn.addActionListener(e -> updateOrderStatus(orderId, "Approved"));
+            
+            JButton rejectBtn = new JButton("Reject");
+            rejectBtn.setBackground(DANGER_COLOR);
+            rejectBtn.setForeground(Color.WHITE);
+            rejectBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            rejectBtn.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
+            rejectBtn.setFocusPainted(false);
+            rejectBtn.addActionListener(e -> updateOrderStatus(orderId, "Rejected"));
+            
+            buttonPanel.add(approveBtn);
+            buttonPanel.add(rejectBtn);
+        } else {
+            JLabel processedLabel = new JLabel("Order " + status);
+            processedLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            processedLabel.setForeground(statusColor);
+            buttonPanel.add(processedLabel);
+        }
+        
+        card.add(infoPanel, BorderLayout.CENTER);
+        card.add(buttonPanel, BorderLayout.EAST);
+        
+        return card;
+    }
+    
+    private void updateOrderStatus(int orderId, String newStatus) {
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+            Connection conn = DriverManager.getConnection(
+                "jdbc:mysql://localhost:3306/drugdatabase?useSSL=false&allowPublicKeyRetrieval=true", 
+                "root", "A@nchal911");
+            
+            String query = "UPDATE orders SET status = ? WHERE oid = ?";
+            PreparedStatement ps = conn.prepareStatement(query);
+            ps.setString(1, newStatus);
+            ps.setInt(2, orderId);
+            
+            int result = ps.executeUpdate();
+            conn.close();
+            
+            if (result > 0) {
+                JOptionPane.showMessageDialog(this, 
+                    "Order #" + orderId + " has been " + newStatus.toLowerCase() + "!", 
+                    "Order Updated", JOptionPane.INFORMATION_MESSAGE);
+                showOrderManagement(); // Refresh the view
+            }
+            
+        } catch (Exception e) {
+            System.out.println("Error updating order status: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, 
+                "Failed to update order status!", 
+                "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
     
     private void showAddMedicine() {
@@ -703,13 +1157,59 @@ public class VendorDashboard extends JFrame {
     }
     
     private void loadVendorData() {
-        // Load mock data
-        inventory.add(new Medicine("MED001", "Paracetamol 500mg", "Pain Relief", 250, 25.0, "2025-12-31"));
-        inventory.add(new Medicine("MED002", "Crocin Advance", "Fever", 180, 35.0, "2025-10-15"));
-        inventory.add(new Medicine("MED003", "Dolo 650", "Pain Relief", 120, 30.0, "2025-11-20"));
-        
-        pendingOrders.add(new Order("ORD001", "aanchal01", "Paracetamol, Crocin", 60.0, "Pending"));
-        pendingOrders.add(new Order("ORD002", "shagun02", "Dolo 650", 30.0, "Processing"));
+        // Load real data from database
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+            Connection conn = DriverManager.getConnection(
+                "jdbc:mysql://localhost:3306/drugdatabase?useSSL=false&allowPublicKeyRetrieval=true", 
+                "root", "A@nchal911");
+            
+            // Load inventory
+            String inventoryQuery = "SELECT p.pid, p.pname, 'Medicine' as category, i.quantity, p.price, p.exp " +
+                                   "FROM product p JOIN inventory i ON p.pid = i.pid WHERE i.sid = ?";
+            PreparedStatement ps1 = conn.prepareStatement(inventoryQuery);
+            ps1.setString(1, currentVendor);
+            ResultSet rs1 = ps1.executeQuery();
+            
+            while (rs1.next()) {
+                inventory.add(new Medicine(
+                    rs1.getString("pid"),
+                    rs1.getString("pname"),
+                    rs1.getString("category"),
+                    rs1.getInt("quantity"),
+                    rs1.getDouble("price"),
+                    rs1.getString("exp")
+                ));
+            }
+            
+            // Load orders
+            String ordersQuery = "SELECT oid, uid, pid, quantity, price, 'Pending' as status FROM orders WHERE sid = ?";
+            PreparedStatement ps2 = conn.prepareStatement(ordersQuery);
+            ps2.setString(1, currentVendor);
+            ResultSet rs2 = ps2.executeQuery();
+            
+            while (rs2.next()) {
+                pendingOrders.add(new Order(
+                    "ORD" + rs2.getInt("oid"),
+                    rs2.getString("uid"),
+                    rs2.getString("pid"),
+                    rs2.getDouble("price"),
+                    rs2.getString("status")
+                ));
+            }
+            
+            conn.close();
+            
+        } catch (Exception e) {
+            System.out.println("Error loading vendor data: " + e.getMessage());
+            // Load mock data as fallback
+            inventory.add(new Medicine("MED001", "Paracetamol 500mg", "Pain Relief", 250, 25.0, "2025-12-31"));
+            inventory.add(new Medicine("MED002", "Crocin Advance", "Fever", 180, 35.0, "2025-10-15"));
+            inventory.add(new Medicine("MED003", "Dolo 650", "Pain Relief", 120, 30.0, "2025-11-20"));
+            
+            pendingOrders.add(new Order("ORD001", "aanchal01", "Paracetamol, Crocin", 60.0, "Pending"));
+            pendingOrders.add(new Order("ORD002", "shagun02", "Dolo 650", 30.0, "Processing"));
+        }
     }
     
     private void setupEventHandlers() {
