@@ -1224,7 +1224,7 @@ public class VendorDashboard extends JFrame {
         
         if (confirm == JOptionPane.YES_OPTION) {
             dispose();
-            new com.emedpharma.gui.MainApplication();
+            new com.emedpharma.common.MainApplication();
         }
     }
     
