@@ -1,4 +1,4 @@
-package com.emedpharma.gui;
+package com.emedpharma.common;
 
 import javax.swing.*;
 import java.awt.*;
@@ -218,8 +218,7 @@ public class MainApplication extends JFrame {
                 g2d.setPaint(gradient);
                 g2d.fillRect(0, 0, getWidth(), getHeight());
                 
-                // Floating medical icons
-                drawFloatingIcons(g2d);
+                // Simple background without animations
             }
         };
         heroPanel.setBorder(BorderFactory.createEmptyBorder(80, 100, 80, 100));
@@ -289,12 +288,7 @@ public class MainApplication extends JFrame {
         ctaButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         ctaButton.setContentAreaFilled(false);
         
-        // Pulse animation
-        Timer pulseTimer = new Timer(1000, e -> {
-            ctaButton.setBackground(ctaButton.getBackground().equals(ACCENT_GREEN) ? PRIMARY_GREEN : ACCENT_GREEN);
-            ctaButton.repaint();
-        });
-        pulseTimer.start();
+        // No pulse animation
         
         JButton learnButton = new JButton("Learn More") {
             @Override

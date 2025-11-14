@@ -1,4 +1,4 @@
-package com.emedpharma.gui;
+package com.emedpharma.customer;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -620,7 +620,7 @@ public class SmartCustomerDashboard extends JFrame {
         JPanel categoriesPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         categoriesPanel.setBackground(new Color(248, 250, 252));
         
-        String[] categories = {"All", "Pain Relief", "Fever", "Antibiotics", "Vitamins", "Heart Health", "Diabetes", "Other"};
+        String[] categories = {"All", "Pain Relief", "Heart Health", "Vitamins", "Antibiotics", "Diabetes", "Cold & Flu", "Digestive", "Women's Health", "Skin Care", "Eye Care"};
         
         for (String category : categories) {
             JButton categoryBtn = new JButton(category);
@@ -687,7 +687,7 @@ public class SmartCustomerDashboard extends JFrame {
         productsGrid.setBackground(new Color(248, 250, 252));
         
         for (Product product : allProducts) {
-            if (category.equals("All") || product.getName().toLowerCase().contains(getCategoryKeyword(category))) {
+            if (category.equals("All") || matchesCategory(product.getName(), getCategoryKeyword(category))) {
                 JPanel productCard = createProductCard(product);
                 productsGrid.add(productCard);
             }
@@ -707,14 +707,35 @@ public class SmartCustomerDashboard extends JFrame {
     
     private String getCategoryKeyword(String category) {
         switch (category.toLowerCase()) {
-            case "pain relief": return "paracetamol";
-            case "fever": return "crocin";
-            case "antibiotics": return "antibiotic";
-            case "vitamins": return "vitamin";
-            case "heart health": return "aspirin";
-            case "diabetes": return "diabetes";
+            case "pain relief": return "paracetamol|ibuprofen|combiflam|brufen|dolo|crocin";
+            case "heart health": return "aspirin|ecosprin|atorvastatin|metoprolol";
+            case "vitamins": return "vitamin|calcium|iron|omega|multivitamin";
+            case "antibiotics": return "amoxicillin|azithromycin|cephalexin|antibiotic";
+            case "diabetes": return "metformin|glimepiride|insulin|diabetes";
+            case "cold & flu": return "sinarest|vicks|cetrizine|cough|cold|flu";
+            case "digestive": return "eno|digene|pantoprazole|antacid|digestion";
+            case "women's health": return "folic|calcium|iron|women";
+            case "skin care": return "betnovate|clotrimazole|moisturizing|cream|lotion";
+            case "eye care": return "eye|drops|refresh|vitamin a";
             default: return category.toLowerCase();
         }
+    }
+    
+    private boolean matchesCategory(String productName, String keywords) {
+        String name = productName.toLowerCase();
+        String[] keywordArray = keywords.split("\\|");
+        
+        for (String keyword : keywordArray) {
+            if (name.contains(keyword.trim())) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    private int getUniqueCategories() {
+        String[] categories = {"Pain Relief", "Heart Health", "Vitamins", "Antibiotics", "Diabetes", "Cold & Flu", "Digestive", "Women's Health", "Skin Care", "Eye Care"};
+        return categories.length;
     }
     
     private JPanel createProductCard(Product product) {
@@ -1238,9 +1259,9 @@ public class SmartCustomerDashboard extends JFrame {
                 "jdbc:mysql://localhost:3306/drugdatabase?useSSL=false&allowPublicKeyRetrieval=true", 
                 "root", "A@nchal911");
             
-            String query = "SELECT o.oid, p.pname, o.quantity, o.price, o.order_date " +
+            String query = "SELECT o.oid, p.pname, o.quantity, o.price, o.orderdatetime " +
                           "FROM orders o JOIN product p ON o.pid = p.pid " +
-                          "WHERE o.uid = ? ORDER BY o.order_date DESC";
+                          "WHERE o.uid = ? ORDER BY o.orderdatetime DESC";
             
             PreparedStatement ps = conn.prepareStatement(query);
             ps.setString(1, currentUser);
@@ -1254,7 +1275,7 @@ public class SmartCustomerDashboard extends JFrame {
                     rs.getString("pname"),
                     rs.getInt("quantity"),
                     rs.getDouble("price"),
-                    rs.getString("order_date")
+                    rs.getString("orderdatetime")
                 );
                 billsList.add(billCard);
                 billsList.add(Box.createVerticalStrut(10));
@@ -1621,12 +1642,39 @@ public class SmartCustomerDashboard extends JFrame {
     }
     
     private void loadSampleProducts() {
+        // Pain Relief & Fever
         allProducts.add(new Product("MED001", "Paracetamol 500mg", "Generic", 25.0, 100));
         allProducts.add(new Product("MED002", "Crocin Advance", "GSK", 35.0, 50));
         allProducts.add(new Product("MED003", "Dolo 650", "Micro Labs", 30.0, 75));
+        allProducts.add(new Product("MED007", "Ibuprofen 400mg", "Abbott", 45.0, 80));
+        allProducts.add(new Product("MED008", "Combiflam", "Sanofi", 38.0, 65));
+        
+        // Heart Health
         allProducts.add(new Product("MED004", "Aspirin 75mg", "Bayer", 45.0, 60));
+        allProducts.add(new Product("MED010", "Ecosprin 75mg", "USV", 28.0, 90));
+        allProducts.add(new Product("MED011", "Atorvastatin 10mg", "Ranbaxy", 85.0, 45));
+        
+        // Vitamins & Supplements
         allProducts.add(new Product("MED005", "Vitamin D3", "Cipla", 120.0, 40));
         allProducts.add(new Product("MED006", "Calcium Tablets", "Sun Pharma", 80.0, 30));
+        allProducts.add(new Product("MED013", "Vitamin B12 Tablets", "Himalaya", 95.0, 55));
+        allProducts.add(new Product("MED014", "Omega-3 Capsules", "Amway", 450.0, 25));
+        
+        // Antibiotics
+        allProducts.add(new Product("MED017", "Amoxicillin 500mg", "Cipla", 120.0, 35));
+        allProducts.add(new Product("MED018", "Azithromycin 250mg", "Pfizer", 180.0, 28));
+        
+        // Diabetes Care
+        allProducts.add(new Product("MED020", "Metformin 500mg", "Sun Pharma", 45.0, 70));
+        allProducts.add(new Product("MED021", "Glimepiride 2mg", "Torrent", 65.0, 40));
+        
+        // Cold & Flu
+        allProducts.add(new Product("MED023", "Sinarest Tablet", "Centaur", 25.0, 85));
+        allProducts.add(new Product("MED024", "Vicks Cough Syrup", "P&G", 85.0, 45));
+        
+        // Digestive Health
+        allProducts.add(new Product("MED026", "ENO Antacid", "GSK", 45.0, 95));
+        allProducts.add(new Product("MED027", "Digene Gel", "Abbott", 55.0, 60));
     }
     
     private void loadUserSubscriptions() {
@@ -2281,11 +2329,11 @@ public class SmartCustomerDashboard extends JFrame {
                 "jdbc:mysql://localhost:3306/drugdatabase?useSSL=false&allowPublicKeyRetrieval=true", 
                 "root", "A@nchal911");
             
-            String query = "SELECT o.oid, p.pname, o.quantity, o.price, o.status, o.order_date, s.sname " +
+            String query = "SELECT o.oid, p.pname, o.quantity, o.price, o.orderdatetime, s.sname " +
                           "FROM orders o " +
                           "JOIN product p ON o.pid = p.pid " +
                           "LEFT JOIN seller s ON o.sid = s.sid " +
-                          "WHERE o.uid = ? ORDER BY o.order_date DESC";
+                          "WHERE o.uid = ? ORDER BY o.orderdatetime DESC";
             
             PreparedStatement ps = conn.prepareStatement(query);
             ps.setString(1, currentUser);
@@ -2299,8 +2347,8 @@ public class SmartCustomerDashboard extends JFrame {
                     rs.getString("pname"),
                     rs.getInt("quantity"),
                     rs.getDouble("price"),
-                    rs.getString("status"),
-                    rs.getString("order_date"),
+                    "Pending",
+                    rs.getString("orderdatetime"),
                     rs.getString("sname")
                 );
                 ordersList.add(orderCard);
@@ -2623,7 +2671,7 @@ public class SmartCustomerDashboard extends JFrame {
         
         if (confirm == JOptionPane.YES_OPTION) {
             dispose();
-            new MainApplication();
+            new com.emedpharma.common.MainApplication();
         }
     }
     

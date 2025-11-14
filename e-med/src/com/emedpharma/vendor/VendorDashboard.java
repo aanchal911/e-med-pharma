@@ -1,4 +1,4 @@
-package com.emedpharma.gui;
+package com.emedpharma.vendor;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -809,9 +809,9 @@ public class VendorDashboard extends JFrame {
                 "jdbc:mysql://localhost:3306/drugdatabase?useSSL=false&allowPublicKeyRetrieval=true", 
                 "root", "A@nchal911");
             
-            String query = "SELECT o.oid, o.uid, p.pname, o.quantity, o.price, o.status, o.order_date " +
+            String query = "SELECT o.oid, o.uid, p.pname, o.quantity, o.price, o.orderdatetime " +
                           "FROM orders o JOIN product p ON o.pid = p.pid " +
-                          "WHERE o.sid = ? ORDER BY o.order_date DESC";
+                          "WHERE o.sid = ? ORDER BY o.orderdatetime DESC";
             
             PreparedStatement ps = conn.prepareStatement(query);
             ps.setString(1, currentVendor);
@@ -824,8 +824,8 @@ public class VendorDashboard extends JFrame {
                     rs.getString("pname"),
                     rs.getInt("quantity"),
                     rs.getDouble("price"),
-                    rs.getString("status"),
-                    rs.getString("order_date")
+                    "Pending", // Default status since orders table doesn't have status column
+                    rs.getString("orderdatetime")
                 );
                 ordersGrid.add(orderCard);
                 ordersGrid.add(Box.createVerticalStrut(10));
@@ -934,33 +934,20 @@ public class VendorDashboard extends JFrame {
     }
     
     private void updateOrderStatus(int orderId, String newStatus) {
-        try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
-            Connection conn = DriverManager.getConnection(
-                "jdbc:mysql://localhost:3306/drugdatabase?useSSL=false&allowPublicKeyRetrieval=true", 
-                "root", "A@nchal911");
-            
-            String query = "UPDATE orders SET status = ? WHERE oid = ?";
-            PreparedStatement ps = conn.prepareStatement(query);
-            ps.setString(1, newStatus);
-            ps.setInt(2, orderId);
-            
-            int result = ps.executeUpdate();
-            conn.close();
-            
-            if (result > 0) {
-                JOptionPane.showMessageDialog(this, 
-                    "Order #" + orderId + " has been " + newStatus.toLowerCase() + "!", 
-                    "Order Updated", JOptionPane.INFORMATION_MESSAGE);
-                showOrderManagement(); // Refresh the view
-            }
-            
-        } catch (Exception e) {
-            System.out.println("Error updating order status: " + e.getMessage());
-            JOptionPane.showMessageDialog(this, 
-                "Failed to update order status!", 
-                "Error", JOptionPane.ERROR_MESSAGE);
-        }
+        // Since the current orders table doesn't have a status column,
+        // we'll simulate the approval/rejection process
+        
+        JOptionPane.showMessageDialog(this, 
+            "Order #" + orderId + " has been " + newStatus.toLowerCase() + "!\n\n" +
+            "Note: To fully implement this feature, add a 'status' column to the orders table.", 
+            "Order " + newStatus, JOptionPane.INFORMATION_MESSAGE);
+        
+        // For demonstration, we'll refresh the view
+        showOrderManagement();
+        
+        // TODO: Add status column to orders table and implement real update:
+        // ALTER TABLE orders ADD COLUMN status VARCHAR(20) DEFAULT 'Pending';
+        // Then use: UPDATE orders SET status = ? WHERE oid = ?
     }
     
     private void showAddMedicine() {
@@ -1182,8 +1169,8 @@ public class VendorDashboard extends JFrame {
                 ));
             }
             
-            // Load orders
-            String ordersQuery = "SELECT oid, uid, pid, quantity, price, 'Pending' as status FROM orders WHERE sid = ?";
+            // Load orders for this vendor
+            String ordersQuery = "SELECT oid, uid, pid, quantity, price FROM orders WHERE sid = ?";
             PreparedStatement ps2 = conn.prepareStatement(ordersQuery);
             ps2.setString(1, currentVendor);
             ResultSet rs2 = ps2.executeQuery();
@@ -1194,7 +1181,7 @@ public class VendorDashboard extends JFrame {
                     rs2.getString("uid"),
                     rs2.getString("pid"),
                     rs2.getDouble("price"),
-                    rs2.getString("status")
+                    "Pending" // Default status
                 ));
             }
             

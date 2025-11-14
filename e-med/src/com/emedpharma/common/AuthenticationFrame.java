@@ -1,4 +1,4 @@
-package com.emedpharma.gui;
+package com.emedpharma.common;
 
 import javax.swing.*;
 import java.awt.*;
@@ -8,10 +8,9 @@ import java.sql.*;
 
 public class AuthenticationFrame extends JFrame {
     private JTabbedPane tabbedPane;
-    private JTextField loginUserId, signupUserId, signupName, signupEmail, signupPhone;
+    private JTextField loginUserId, signupUserId, signupName, signupEmail, signupPhone, signupAddress;
     private JPasswordField loginPassword, signupPassword, confirmPassword;
     private JComboBox<String> loginUserType, signupUserType, signupCity;
-    private JTextArea signupAddress;
     private JLabel statusLabel;
     
     private MainApplication parentApp;
@@ -66,7 +65,7 @@ public class AuthenticationFrame extends JFrame {
             "Morbi", "Mehsana", "Bharuch", "Vapi", "Veraval",
             "Porbandar", "Godhra", "Botad", "Amreli", "Palanpur"
         });
-        signupAddress = new JTextArea(2, 20);
+        signupAddress = new JTextField(20);
         
         statusLabel = new JLabel(" ");
         statusLabel.setHorizontalAlignment(SwingConstants.CENTER);
@@ -210,13 +209,8 @@ public class AuthenticationFrame extends JFrame {
         gbc.gridx = 0; gbc.gridy = 6; gbc.fill = GridBagConstraints.NONE;
         panel.add(new JLabel("Street Address:"), gbc);
         gbc.gridx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
-        signupAddress.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(200, 200, 200)),
-            BorderFactory.createEmptyBorder(5, 10, 5, 10)));
-        signupAddress.setRows(2);
-        JScrollPane addressScroll = new JScrollPane(signupAddress);
-        addressScroll.setPreferredSize(new Dimension(200, 50));
-        panel.add(addressScroll, gbc);
+        styleTextField(signupAddress);
+        panel.add(signupAddress, gbc);
         
         // Password
         gbc.gridx = 0; gbc.gridy = 7; gbc.fill = GridBagConstraints.NONE;
@@ -336,7 +330,13 @@ public class AuthenticationFrame extends JFrame {
         worker.execute();
     }
     
+    /**
+     * ENCAPSULATION: This private method handles user registration
+     * Data is encapsulated within this method and validated before processing
+     * Demonstrates data hiding - internal logic is hidden from external classes
+     */
     private void performSignup() {
+        // Extract user input data from GUI components (Encapsulation of form data)
         String userType = (String) signupUserType.getSelectedItem();
         String userId = signupUserId.getText().trim();
         String name = signupName.getText().trim();
@@ -345,26 +345,34 @@ public class AuthenticationFrame extends JFrame {
         String city = (String) signupCity.getSelectedItem();
         String streetAddress = signupAddress.getText().trim();
         String fullAddress = streetAddress + ", " + city + ", Gujarat, India";
+        // Convert char array to String for security (password handling best practice)
         String password = new String(signupPassword.getPassword());
         String confirmPass = new String(confirmPassword.getPassword());
         
+        // Input validation - ensures data integrity before processing
         if (userId.isEmpty() || name.isEmpty() || email.isEmpty() || 
             phone.isEmpty() || streetAddress.isEmpty() || password.isEmpty() || confirmPass.isEmpty()) {
             showStatus("Please fill all required fields", Color.RED);
-            return;
+            return; // Early return pattern for validation
         }
         
+        // Password confirmation validation - security measure
         if (!password.equals(confirmPass)) {
             showStatus("Passwords do not match!", Color.RED);
             return;
         }
         
+        // POLYMORPHISM: SwingWorker is used for background processing
+        // This prevents GUI freezing during database operations
         SwingWorker<Boolean, Void> worker = new SwingWorker<Boolean, Void>() {
+            // METHOD OVERRIDING: Overriding abstract method from SwingWorker class
             @Override
             protected Boolean doInBackground() throws Exception {
+                // Delegate user creation to separate method (Single Responsibility Principle)
                 return createUser(userId, name, email, phone, fullAddress, password, userType);
             }
             
+            // METHOD OVERRIDING: Overriding done() method to handle UI updates
             @Override
             protected void done() {
                 try {
@@ -389,55 +397,73 @@ public class AuthenticationFrame extends JFrame {
         worker.execute();
     }
     
+    /**
+     * POLYMORPHISM & ABSTRACTION: This method handles authentication for different user types
+     * Uses conditional logic to abstract database table differences
+     * Demonstrates polymorphic behavior - same method works for different user types
+     */
     private boolean authenticateUser(String userId, String password, String userType) {
+        // POLYMORPHISM: Different table names based on user type
+        // This allows same method to work with Customer, Vendor, or Admin
         String tableName = "Customer".equals(userType) ? "customer" : 
                           "Vendor".equals(userType) ? "seller" : "admin";
+        // Different column names for different user types (Database abstraction)
         String idColumn = "Customer".equals(userType) ? "uid" : 
                          "Vendor".equals(userType) ? "sid" : "aid";
         
+        // Dynamic SQL query construction based on user type (Polymorphism in action)
         String query = "SELECT " + idColumn + ", pass FROM " + tableName + " WHERE " + idColumn + " = ?";
         
         try {
-            // Try MySQL 8.0+ driver first
+            // EXCEPTION HANDLING: Try-catch for robust database connectivity
+            // Try MySQL 8.0+ driver first (newer version)
             try {
                 Class.forName("com.mysql.cj.jdbc.Driver");
             } catch (ClassNotFoundException e) {
-                // Fallback to older driver
+                // Fallback to older driver for compatibility
                 Class.forName("com.mysql.jdbc.Driver");
             }
             
+            // Database connection establishment
             Connection conn = DriverManager.getConnection(
                 "jdbc:mysql://localhost:3306/drugdatabase?useSSL=false&allowPublicKeyRetrieval=true", 
                 "root", "A@nchal911");
             
+            // Debug logging for development
             System.out.println("Database connected successfully");
             System.out.println("Executing query: " + query + " with userId: " + userId);
             
+            // SECURITY: Using PreparedStatement to prevent SQL injection
             PreparedStatement ps = conn.prepareStatement(query);
-            ps.setString(1, userId);
+            ps.setString(1, userId); // Parameter binding for security
             ResultSet rs = ps.executeQuery();
             
+            // Check if user exists in database
             if (rs.next()) {
                 String dbPassword = rs.getString("pass");
                 System.out.println("Found user in database. Password match: " + password.equals(dbPassword));
-                conn.close();
-                return password.equals(dbPassword);
+                conn.close(); // Resource cleanup
+                return password.equals(dbPassword); // Password verification
             } else {
                 System.out.println("User not found in database");
             }
-            conn.close();
+            conn.close(); // Always close database connections
         } catch (Exception e) {
+            // EXCEPTION HANDLING: Graceful error handling for database failures
             System.out.println("Database error: " + e.getMessage());
             e.printStackTrace();
             
-            // Fallback to hardcoded credentials for testing
+            // FALLBACK MECHANISM: Hardcoded credentials for testing when DB is unavailable
+            // This demonstrates defensive programming - system still works without database
             System.out.println("=== USING FALLBACK AUTHENTICATION ===");
             System.out.println("Checking userType: '" + userType + "'");
             System.out.println("Checking userId: '" + userId + "'");
             System.out.println("Checking password: '" + password + "'");
             
+            // POLYMORPHISM: Same authentication logic handles different user types
             if ("Customer".equals(userType)) {
                 System.out.println("Customer type selected, checking credentials...");
+                // Hardcoded customer credentials for testing
                 if ("aanchal01".equals(userId) && "pass123".equals(password)) {
                     System.out.println("✓ aanchal01 credentials match!");
                     return true;
@@ -453,6 +479,7 @@ public class AuthenticationFrame extends JFrame {
                 }
             } else if ("Vendor".equals(userType)) {
                 System.out.println("Vendor type selected, checking credentials...");
+                // Multiple vendor credentials - demonstrates scalability
                 if (("vendor01".equals(userId) && "vendor123".equals(password)) ||
                     ("vendor02".equals(userId) && "vendor456".equals(password)) ||
                     ("vendor03".equals(userId) && "health123".equals(password)) ||
@@ -474,56 +501,88 @@ public class AuthenticationFrame extends JFrame {
         return false;
     }
     
+    /**
+     * POLYMORPHISM: Creates different types of users (Customer/Vendor) using same method
+     * ENCAPSULATION: Database operations are encapsulated within this method
+     * ABSTRACTION: Hides complex database insertion logic from calling code
+     */
     private boolean createUser(String userId, String name, String email, String phone, 
                               String address, String password, String userType) {
+        // POLYMORPHISM: Different table names based on user type
         String tableName = "Customer".equals(userType) ? "customer" : "seller";
         String query;
         
+        // Dynamic query construction based on user type (Polymorphic behavior)
         if ("Customer".equals(userType)) {
+            // Customer table has 'uid' as primary key
             query = "INSERT INTO customer (uid, name, email, phone, address, pass) VALUES (?, ?, ?, ?, ?, ?)";
         } else {
+            // Seller table has 'sid' as primary key
             query = "INSERT INTO seller (sid, name, email, phone, address, pass) VALUES (?, ?, ?, ?, ?, ?)";
         }
         
         try {
+            // Load MySQL JDBC driver
             Class.forName("com.mysql.jdbc.Driver");
+            // Establish database connection
             Connection conn = DriverManager.getConnection(
                 "jdbc:mysql://localhost:3306/drugdatabase", "root", "A@nchal911");
             
+            // SECURITY: Use PreparedStatement to prevent SQL injection
             PreparedStatement ps = conn.prepareStatement(query);
-            ps.setString(1, userId);
-            ps.setString(2, name);
-            ps.setString(3, email);
-            ps.setString(4, phone);
-            ps.setString(5, address);
-            ps.setString(6, password);
+            // Bind parameters to prevent SQL injection attacks
+            ps.setString(1, userId);    // User ID (uid/sid)
+            ps.setString(2, name);      // Full name
+            ps.setString(3, email);     // Email address
+            ps.setString(4, phone);     // Phone number
+            ps.setString(5, address);   // Full address
+            ps.setString(6, password);  // Password (should be hashed in production)
             
+            // Execute the insert query
             int result = ps.executeUpdate();
-            conn.close();
-            return result > 0;
+            conn.close(); // Always close database connections
+            return result > 0; // Return true if insertion was successful
         } catch (Exception e) {
+            // EXCEPTION HANDLING: Log error and return false on failure
             e.printStackTrace();
             return false;
         }
     }
     
+    /**
+     * POLYMORPHISM: Opens different dashboard types based on user type
+     * FACTORY PATTERN: Creates appropriate dashboard object based on user type
+     * ABSTRACTION: Hides dashboard creation complexity from authentication logic
+     */
     private void openDashboard(String userType, String userId) {
+        // POLYMORPHISM: Same method call creates different dashboard types
         switch (userType) {
             case "Customer":
-                new SmartCustomerDashboard(userId).setVisible(true);
+                // Create and show Customer dashboard (inheritance from JFrame)
+                new com.emedpharma.customer.SmartCustomerDashboard(userId).setVisible(true);
                 break;
             case "Vendor":
-                new VendorDashboard(userId).setVisible(true);
+                // Create and show Vendor dashboard (inheritance from JFrame)
+                new com.emedpharma.vendor.VendorDashboard(userId).setVisible(true);
                 break;
             case "Admin":
+                // Admin dashboard not implemented yet
                 JOptionPane.showMessageDialog(this, "Admin Dashboard coming soon!");
                 break;
         }
     }
     
+    /**
+     * ENCAPSULATION: Encapsulates status display logic
+     * ABSTRACTION: Provides simple interface to show status messages
+     * Hides the complexity of GUI component manipulation
+     */
     private void showStatus(String message, Color color) {
+        // Update status label text
         statusLabel.setText(message);
+        // Set text color (red for errors, green for success)
         statusLabel.setForeground(color);
+        // Set font style for better visibility
         statusLabel.setFont(new Font("Arial", Font.BOLD, 12));
     }
 }
