@@ -1,0 +1,28 @@
+flowchart TD
+    A[👤 User] --> B{🔐 Authentication Required?}
+    B -->|Yes| C[📝 Login/Signup]
+    B -->|No| D[🏠 Main Application]
+    
+    C --> E{👥 User Type?}
+    E -->|Customer| F[🛒 Customer Dashboard]
+    E -->|Vendor| G[🏪 Vendor Dashboard]
+    E -->|Admin| H[⚙️ Admin Panel]
+    
+    F --> I[🔍 Browse Products]
+    F --> J[📦 Place Orders]
+    F --> K[📍 Track Orders]
+    F --> L[🧾 View Bills]
+    
+    G --> M[📊 Manage Inventory]
+    G --> N[✅ Process Orders]
+    G --> O[📈 View Analytics]
+    G --> P[💰 Update Prices]
+    
+    I --> Q[(🗄️ Database)]
+    J --> Q
+    K --> Q
+    L --> Q
+    M --> Q
+    N --> Q
+    O --> Q
+    P --> Q

@@ -1,0 +1,42 @@
+flowchart LR
+    subgraph "🖥️ Presentation Layer"
+        A[MainApplication.java<br/>🏠 Main GUI]
+        B[AuthenticationFrame.java<br/>🔐 Login Interface]
+        C[SmartCustomerDashboard.java<br/>🛒 Customer Portal]
+        D[VendorDashboard.java<br/>🏪 Vendor Portal]
+        E[ExpenseManager.java<br/>💰 Expense Tracking]
+    end
+    
+    subgraph "🔧 Business Logic"
+        F[MedicineService.java<br/>💊 Medicine Processing]
+        G[OrderService.java<br/>📦 Order Management]
+        H[UserService.java<br/>👤 User Operations]
+        I[InventoryService.java<br/>📊 Inventory Control]
+        J[AuthService.java<br/>🔑 Authentication]
+    end
+    
+    subgraph "🗄️ Data Layer"
+        K[(MySQL Database<br/>drugdatabase)]
+        L[DatabaseConnection.java<br/>🔗 Connection Pool]
+    end
+    
+    A --> F
+    A --> G
+    B --> J
+    C --> F
+    C --> G
+    D --> I
+    E --> G
+    
+    F --> L
+    G --> L
+    H --> L
+    I --> L
+    J --> L
+    
+    L --> K
+    
+    style A fill:#FF6B6B,stroke:#333,stroke-width:2px,color:#fff
+    style K fill:#4ECDC4,stroke:#333,stroke-width:2px,color:#fff
+    style F fill:#96CEB4,stroke:#333,stroke-width:2px,color:#fff
+    style G fill:#FFEAA7,stroke:#333,stroke-width:2px,color:#333

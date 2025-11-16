@@ -1,0 +1,71 @@
+erDiagram
+    CUSTOMER {
+        varchar uid PK
+        varchar pass
+        varchar fname
+        varchar lname
+        varchar email
+        text address
+        bigint phno
+        timestamp created_at
+    }
+    
+    SELLER {
+        varchar sid PK
+        varchar sname
+        varchar pass
+        text address
+        bigint phno
+        varchar business_license
+        timestamp created_at
+    }
+    
+    PRODUCT {
+        varchar pid PK
+        varchar pname
+        varchar manufacturer
+        date mfg
+        date exp
+        decimal price
+        varchar category
+        text description
+        boolean is_active
+    }
+    
+    INVENTORY {
+        varchar pid FK
+        varchar pname
+        int quantity
+        varchar sid FK
+        int min_stock
+        timestamp last_updated
+    }
+    
+    ORDERS {
+        int oid PK
+        varchar uid FK
+        varchar pid FK
+        varchar sid FK
+        int quantity
+        decimal price
+        datetime orderdatetime
+        varchar status
+        text notes
+    }
+    
+    EXPENSES {
+        int expense_id PK
+        varchar uid FK
+        varchar category
+        decimal amount
+        text description
+        date expense_date
+        timestamp created_at
+    }
+    
+    CUSTOMER ||--o{ ORDERS : "places"
+    SELLER ||--o{ INVENTORY : "manages"
+    SELLER ||--o{ ORDERS : "fulfills"
+    PRODUCT ||--o{ INVENTORY : "stocked_as"
+    PRODUCT ||--o{ ORDERS : "ordered_as"
+    CUSTOMER ||--o{ EXPENSES : "tracks"

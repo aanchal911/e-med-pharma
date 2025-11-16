@@ -1,0 +1,62 @@
+classDiagram
+    class User {
+        <<abstract>>
+        -String userId
+        -String name
+        -String email
+        -String password
+        -String address
+        -long phoneNumber
+        +getUserType()* String
+        +authenticate(password) boolean
+        +updateProfile(name, email) void
+    }
+    
+    class Customer {
+        -String firstName
+        -String lastName
+        -List~Order~ orderHistory
+        +getUserType() String
+        +placeOrder(medicineId, quantity) void
+        +trackOrder(orderId) void
+        +uploadPrescription(path) void
+    }
+    
+    class Vendor {
+        -String businessLicense
+        -List~Medicine~ inventory
+        +getUserType() String
+        +addMedicine(medicine) boolean
+        +updateInventory(medicineId, stock) void
+        +processOrder(orderId) void
+    }
+    
+    class Medicine {
+        -String medicineId
+        -String name
+        -String manufacturer
+        -double price
+        -int stock
+        -Date expiryDate
+        +isExpired() boolean
+        +updatePrice(newPrice) void
+        +addStock(quantity) void
+    }
+    
+    class Order {
+        -int orderId
+        -String customerId
+        -String vendorId
+        -List~OrderItem~ items
+        -double totalAmount
+        -OrderStatus status
+        +addItem(medicine, quantity) void
+        +calculateTotal() double
+        +updateStatus(status) void
+    }
+    
+    User <|-- Customer
+    User <|-- Vendor
+    Customer "1" --> "*" Order : places
+    Vendor "1" --> "*" Medicine : manages
+    Order "*" --> "*" Medicine : contains
