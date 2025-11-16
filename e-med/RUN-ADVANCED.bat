@@ -1,0 +1,3 @@
+@echo off
+echo Starting e-MEDpharma Advanced UI...
+java -cp "classes;mysql-connector-j-9.4.0\mysql-connector-j-9.4.0.jar" com.emedpharma.common.MainApplication

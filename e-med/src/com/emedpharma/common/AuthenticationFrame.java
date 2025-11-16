@@ -49,7 +49,7 @@ public class AuthenticationFrame extends JFrame {
         // Login components
         loginUserId = new JTextField(20);
         loginPassword = new JPasswordField(20);
-        loginUserType = new JComboBox<>(new String[]{"Customer", "Vendor", "Admin"});
+        loginUserType = new JComboBox<>(new String[]{"Customer", "Vendor"});
         
         // Signup components
         signupUserId = new JTextField(20);
@@ -145,9 +145,14 @@ public class AuthenticationFrame extends JFrame {
         gbc.gridy = 4; gbc.insets = new Insets(10, 10, 10, 10);
         JLabel testLabel = new JLabel("<html><center><b>Test Credentials:</b><br>" +
             "Customer: aanchal01/pass123<br>" +
-            "Vendors: vendor01/vendor123, vendor02/vendor456<br>" +
-            "vendor03/health123, vendor04/guard456<br>" +
-            "vendor05/net789, vendor06/onemg321, vendor07/easy654</center></html>");
+            "<b>Pharmacy Partners:</b><br>" +
+            "Apollo Pharmacy: vendor01/vendor123<br>" +
+            "MedPlus Store: vendor02/vendor456<br>" +
+            "HealthKart Pharmacy: vendor03/health123<br>" +
+            "Guardian Pharmacy: vendor04/guard456<br>" +
+            "Netmeds Store: vendor05/net789<br>" +
+            "1mg Pharmacy: vendor06/onemg321<br>" +
+            "Pharmeasy Store: vendor07/easy654</center></html>");
         testLabel.setFont(new Font("Arial", Font.PLAIN, 10));
         testLabel.setForeground(new Color(100, 100, 100));
         panel.add(testLabel, gbc);
@@ -404,12 +409,10 @@ public class AuthenticationFrame extends JFrame {
      */
     private boolean authenticateUser(String userId, String password, String userType) {
         // POLYMORPHISM: Different table names based on user type
-        // This allows same method to work with Customer, Vendor, or Admin
-        String tableName = "Customer".equals(userType) ? "customer" : 
-                          "Vendor".equals(userType) ? "seller" : "admin";
+        // This allows same method to work with Customer and Vendor
+        String tableName = "Customer".equals(userType) ? "customer" : "seller";
         // Different column names for different user types (Database abstraction)
-        String idColumn = "Customer".equals(userType) ? "uid" : 
-                         "Vendor".equals(userType) ? "sid" : "aid";
+        String idColumn = "Customer".equals(userType) ? "uid" : "sid";
         
         // Dynamic SQL query construction based on user type (Polymorphism in action)
         String query = "SELECT " + idColumn + ", pass FROM " + tableName + " WHERE " + idColumn + " = ?";
@@ -479,7 +482,7 @@ public class AuthenticationFrame extends JFrame {
                 }
             } else if ("Vendor".equals(userType)) {
                 System.out.println("Vendor type selected, checking credentials...");
-                // Multiple vendor credentials - demonstrates scalability
+                // Multiple pharmacy partner credentials - demonstrates scalability
                 if (("vendor01".equals(userId) && "vendor123".equals(password)) ||
                     ("vendor02".equals(userId) && "vendor456".equals(password)) ||
                     ("vendor03".equals(userId) && "health123".equals(password)) ||
@@ -487,14 +490,12 @@ public class AuthenticationFrame extends JFrame {
                     ("vendor05".equals(userId) && "net789".equals(password)) ||
                     ("vendor06".equals(userId) && "onemg321".equals(password)) ||
                     ("vendor07".equals(userId) && "easy654".equals(password))) {
-                    System.out.println("✓ Vendor credentials match for: " + userId);
+                    System.out.println("✓ Pharmacy partner credentials match for: " + getPharmacyName(userId));
                     return true;
                 } else {
-                    System.out.println("✗ Vendor credentials don't match");
-                    System.out.println("Available vendors: vendor01-07 with respective passwords");
+                    System.out.println("✗ Pharmacy credentials don't match");
+                    System.out.println("Available pharmacies: Apollo, MedPlus, HealthGuard, Guardian, Netmeds, 1mg, EasyMedico");
                 }
-            } else {
-                System.out.println("Unknown user type: " + userType);
             }
         }
         System.out.println("=== AUTHENTICATION FAILED ===");
@@ -562,13 +563,27 @@ public class AuthenticationFrame extends JFrame {
                 new com.emedpharma.customer.SmartCustomerDashboard(userId).setVisible(true);
                 break;
             case "Vendor":
-                // Create and show Vendor dashboard (inheritance from JFrame)
-                new com.emedpharma.vendor.VendorDashboard(userId).setVisible(true);
+                // Create and show Vendor dashboard with pharmacy name (inheritance from JFrame)
+                new com.emedpharma.vendor.VendorDashboard(userId, getPharmacyName(userId)).setVisible(true);
                 break;
-            case "Admin":
-                // Admin dashboard not implemented yet
-                JOptionPane.showMessageDialog(this, "Admin Dashboard coming soon!");
-                break;
+
+        }
+    }
+    
+    /**
+     * ENCAPSULATION: Maps vendor IDs to actual pharmacy names
+     * ABSTRACTION: Hides the mapping logic from other methods
+     */
+    private String getPharmacyName(String vendorId) {
+        switch (vendorId) {
+            case "vendor01": return "Apollo Pharmacy";
+            case "vendor02": return "MedPlus Store";
+            case "vendor03": return "HealthKart Pharmacy";
+            case "vendor04": return "Guardian Pharmacy";
+            case "vendor05": return "Netmeds Store";
+            case "vendor06": return "1mg Pharmacy";
+            case "vendor07": return "Pharmeasy Store";
+            default: return "Unknown Pharmacy";
         }
     }
     

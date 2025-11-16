@@ -68,179 +68,6 @@ e-MEDpharma is a comprehensive digital pharmacy management system that demonstra
 
 </div>
 
-## 🏗️ System Architecture
-
-```mermaid
-flowchart LR
-    subgraph "🖥️ Presentation Layer"
-        A[MainApplication.java<br/>🏠 Main GUI]
-        B[AuthenticationFrame.java<br/>🔐 Login Interface]
-        C[CustomerDashboard.java<br/>🛒 Customer Portal]
-        D[VendorDashboard.java<br/>🏪 Vendor Portal]
-        E[SmartCustomerDashboard.java<br/>⭐ AI Dashboard]
-    end
-    
-    subgraph "🔧 Business Logic"
-        F[MedicineService<br/>💊 Medicine Processing]
-        G[OrderService<br/>📦 Order Management]
-        H[UserService<br/>👤 User Operations]
-        I[InventoryService<br/>📊 Inventory Control]
-        J[AuthService<br/>🔑 Authentication]
-    end
-    
-    subgraph "🗄️ Data Layer"
-        K[(MySQL Database<br/>🏥 drugdatabase)]
-        L[DatabaseConnection<br/>🔗 Connection Pool]
-    end
-    
-    A --> F
-    A --> G
-    B --> J
-    C --> F
-    C --> G
-    D --> I
-    E --> F
-    
-    F --> L
-    G --> L
-    H --> L
-    I --> L
-    J --> L
-    
-    L --> K
-    
-    style A fill:#FF6B6B,stroke:#333,stroke-width:2px,color:#fff
-    style K fill:#4ECDC4,stroke:#333,stroke-width:2px,color:#fff
-    style F fill:#96CEB4,stroke:#333,stroke-width:2px,color:#fff
-    style G fill:#FFEAA7,stroke:#333,stroke-width:2px,color:#333
-    style H fill:#DDA0DD,stroke:#333,stroke-width:2px,color:#fff
-```
-
-## 📊 Database Schema
-
-```mermaid
-erDiagram
-    CUSTOMER {
-        varchar uid PK
-        varchar pass
-        varchar fname
-        varchar lname
-        varchar email
-        text address
-        bigint phno
-        timestamp created_at
-    }
-    
-    SELLER {
-        varchar sid PK
-        varchar sname
-        varchar pass
-        text address
-        bigint phno
-        boolean is_active
-        timestamp created_at
-    }
-    
-    PRODUCT {
-        varchar pid PK
-        varchar pname
-        varchar manufacturer
-        date mfg
-        date exp
-        decimal price
-        text description
-        boolean is_active
-    }
-    
-    INVENTORY {
-        varchar pid FK
-        varchar pname
-        int quantity
-        varchar sid FK
-        timestamp updated_at
-    }
-    
-    ORDERS {
-        int oid PK
-        varchar uid FK
-        varchar pid FK
-        varchar sid FK
-        int quantity
-        decimal price
-        datetime orderdatetime
-        varchar status
-    }
-    
-    CUSTOMER ||--o{ ORDERS : "places"
-    SELLER ||--o{ ORDERS : "fulfills"
-    PRODUCT ||--o{ ORDERS : "contains"
-    SELLER ||--o{ INVENTORY : "manages"
-    PRODUCT ||--o{ INVENTORY : "stored_in"
-```
-
-## 📈 Project Progress
-
-```mermaid
-pie title OOP Implementation Progress
-    "Encapsulation" : 100
-    "Inheritance" : 90
-    "Polymorphism" : 85
-    "Abstraction" : 80
-```
-
-```mermaid
-pie title Feature Completion Status
-    "Authentication" : 100
-    "User Management" : 100
-    "Product Catalog" : 100
-    "Order System" : 100
-    "Inventory Mgmt" : 100
-    "AI Recommend" : 75
-    "Analytics" : 50
-```
-
-## 🌟 System Overview
-
-```mermaid
-graph TD
-    A[🏥 e-MEDpharma System] --> B[👤 User Management]
-    A --> C[💊 Medicine Management]
-    A --> D[📦 Order Processing]
-    A --> E[💰 Billing System]
-    A --> F[🤖 AI Recommendations]
-    
-    B --> B1[🔐 Authentication]
-    B --> B2[👥 Customer Portal]
-    B --> B3[🏪 Vendor Portal]
-    
-    C --> C1[💊 Multi-Category Medicines]
-    C --> C2[🏷️ Category Management]
-    C --> C3[💵 Price Management]
-    C --> C4[📦 Inventory Control]
-    
-    D --> D1[🛒 Shopping Cart]
-    D --> D2[➕ Add Medicines]
-    D --> D3[📊 Order Tracking]
-    D --> D4[✅ Order Approval]
-    
-    E --> E1[🧾 Bill Generation]
-    E --> E2[💳 Payment Processing]
-    E --> E3[📈 Sales Reports]
-    
-    F --> F1[🧠 Smart Suggestions]
-    F --> F2[📅 Subscription Management]
-    F --> F3[📊 Health Analytics]
-    
-    style A fill:#FF6B6B,stroke:#333,stroke-width:3px,color:#fff
-    style B fill:#4ECDC4,stroke:#333,stroke-width:2px,color:#fff
-    style C fill:#45B7D1,stroke:#333,stroke-width:2px,color:#fff
-    style D fill:#96CEB4,stroke:#333,stroke-width:2px,color:#fff
-    style E fill:#FFEAA7,stroke:#333,stroke-width:2px,color:#333
-    style F fill:#DDA0DD,stroke:#333,stroke-width:2px,color:#fff
-```
-
-## 🏗️ System Architecture
-
 ```mermaid
 flowchart LR
     subgraph "🖥️ Presentation Layer"
@@ -1038,7 +865,7 @@ run.bat
 │ Total Classes   │   15+   │
 │ Lines of Code   │ 3000+   │
 │ Methods         │  200+   │
-│ Database Tables │    5    │
+│ Database Tables │    6    │
 │ GUI Components  │   50+   │
 └─────────────────┴─────────┘
 ```
@@ -1203,11 +1030,11 @@ The project not only fulfills academic requirements but also provides a foundati
 **Developer:** Aanchal Bhatt  
 **Faculty Supervisor:** Prof. Sandeep Parmar  
 **Project Duration:** Academic Year 2025  
-**Academic Institution:** NAVRACHANA UNIVERSITY 
+**Academic Institution:** NAVRACHANA UNIVERSITY  
 **Course:** Object-Oriented Programming with Java  
 
 ### **Acknowledgments**
-**Special thanks to Prof. Sandeep Parmar Sir** for his invaluable guidance, mentorship, and support throughout the development of this comprehensive pharmacy management system. His expertise in Object-Oriented Programming concepts and software architecture principles was instrumental in shaping this project into a professional-grade application.  
+**Special thanks to Prof. Sandeep Parmar Sir** for his invaluable guidance, mentorship, and support throughout the development of this comprehensive pharmacy management system. His expertise in Object-Oriented Programming concepts and software architecture principles was instrumental in shaping this project into a professional-grade application.
 
 ---
 

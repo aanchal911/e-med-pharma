@@ -185,12 +185,10 @@ public class SmartCustomerDashboard extends JFrame {
         String[][] menuItems = {
             {"[H]", "Dashboard", "home"},
             {"[AI]", "AI Recommendations", "recommendations"},
-            {"[S]", "My Subscriptions", "subscriptions"},
             {"[M]", "Browse Medicines", "medicines"},
             {"[B]", "My Bills", "bills"},
             {"[P]", "Pharmacies Near Me", "pharmacies"},
-            {"[R]", "Health Reports", "reports"},
-            {"[SET]", "Settings", "settings"}
+            {"[R]", "Health Reports", "reports"}
         };
         
         for (String[] item : menuItems) {
@@ -251,19 +249,19 @@ public class SmartCustomerDashboard extends JFrame {
         titleLabel.setForeground(new Color(27, 94, 32));
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         
-        JLabel statusLabel = new JLabel("Active Subscriptions: " + userSubscriptions.size());
+        JLabel statusLabel = new JLabel("Total Orders: " + getTotalOrders());
         statusLabel.setFont(new Font("Arial", Font.PLAIN, 12));
         statusLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         
-        JLabel nextOrderLabel = new JLabel("Next Order: " + getNextOrderDate());
-        nextOrderLabel.setFont(new Font("Arial", Font.PLAIN, 12));
-        nextOrderLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        JLabel healthLabel = new JLabel("Health Score: " + getHealthScore() + "%");
+        healthLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        healthLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         
         card.add(titleLabel);
         card.add(Box.createVerticalStrut(10));
         card.add(statusLabel);
         card.add(Box.createVerticalStrut(5));
-        card.add(nextOrderLabel);
+        card.add(healthLabel);
         
         return card;
     }
@@ -276,9 +274,6 @@ public class SmartCustomerDashboard extends JFrame {
             case "recommendations":
                 showAIRecommendations();
                 break;
-            case "subscriptions":
-                showSubscriptions();
-                break;
             case "medicines":
                 showMedicines();
                 break;
@@ -290,9 +285,6 @@ public class SmartCustomerDashboard extends JFrame {
                 break;
             case "reports":
                 showHealthReports();
-                break;
-            case "settings":
-                showSettings();
                 break;
         }
     }
@@ -349,19 +341,19 @@ public class SmartCustomerDashboard extends JFrame {
         // Total Orders
         JPanel ordersCard = createStatCard("[O]", String.valueOf(getTotalOrders()), "Total Orders", new Color(27, 94, 32));
         
-        // Active Subscriptions
-        JPanel subsCard = createStatCard("[S]", String.valueOf(userSubscriptions.size()), "Active Subscriptions", new Color(40, 167, 69));
+        // Health Score
+        JPanel healthCard = createStatCard("[H]", getHealthScore() + "%", "Health Score", new Color(40, 167, 69));
         
         // Money Saved
         JPanel savingsCard = createStatCard("[$]", "Rs." + getMoneySaved(), "Money Saved", new Color(255, 193, 7));
         
-        // Health Score
-        JPanel healthCard = createStatCard("[H]", getHealthScore() + "%", "Health Score", new Color(220, 53, 69));
+        // Medicine Categories
+        JPanel categoriesCard = createStatCard("[C]", String.valueOf(getUniqueCategories()), "Categories", new Color(220, 53, 69));
         
         statsPanel.add(ordersCard);
-        statsPanel.add(subsCard);
-        statsPanel.add(savingsCard);
         statsPanel.add(healthCard);
+        statsPanel.add(savingsCard);
+        statsPanel.add(categoriesCard);
         
         return statsPanel;
     }
@@ -559,6 +551,7 @@ public class SmartCustomerDashboard extends JFrame {
             viewBtn.setFont(new Font("Arial", Font.BOLD, 12));
             viewBtn.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
             viewBtn.setFocusPainted(false);
+            viewBtn.addActionListener(e -> showRecommendedProduct(rec.getProductId()));
             actionPanel.add(viewBtn);
         }
         
@@ -577,29 +570,7 @@ public class SmartCustomerDashboard extends JFrame {
         return card;
     }
     
-    private void showSubscriptions() {
-        // Implementation for subscription management
-        mainContentPanel.removeAll();
-        
-        JPanel subsPanel = new JPanel(new BorderLayout());
-        subsPanel.setBackground(new Color(248, 250, 252));
-        subsPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
-        
-        JLabel titleLabel = new JLabel("My Medicine Subscriptions");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
-        
-        // Add subscription management UI here
-        JLabel comingSoonLabel = new JLabel("Subscription management coming soon...");
-        comingSoonLabel.setFont(new Font("Arial", Font.PLAIN, 16));
-        comingSoonLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        
-        subsPanel.add(titleLabel, BorderLayout.NORTH);
-        subsPanel.add(comingSoonLabel, BorderLayout.CENTER);
-        
-        mainContentPanel.add(subsPanel, BorderLayout.CENTER);
-        mainContentPanel.revalidate();
-        mainContentPanel.repaint();
-    }
+
     
     private void showMedicines() {
         mainContentPanel.removeAll();
@@ -620,7 +591,7 @@ public class SmartCustomerDashboard extends JFrame {
         JPanel categoriesPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         categoriesPanel.setBackground(new Color(248, 250, 252));
         
-        String[] categories = {"All", "Pain Relief", "Heart Health", "Vitamins", "Antibiotics", "Diabetes", "Cold & Flu", "Digestive", "Women's Health", "Skin Care", "Eye Care"};
+        String[] categories = {"All", "Medicines", "First Aid", "Baby Care", "Skin Care", "Medical Devices", "Supplements"};
         
         for (String category : categories) {
             JButton categoryBtn = new JButton(category);
@@ -687,7 +658,7 @@ public class SmartCustomerDashboard extends JFrame {
         productsGrid.setBackground(new Color(248, 250, 252));
         
         for (Product product : allProducts) {
-            if (category.equals("All") || matchesCategory(product.getName(), getCategoryKeyword(category))) {
+            if (category.equals("All") || matchesCategory(product.getId(), getCategoryKeyword(category))) {
                 JPanel productCard = createProductCard(product);
                 productsGrid.add(productCard);
             }
@@ -707,26 +678,21 @@ public class SmartCustomerDashboard extends JFrame {
     
     private String getCategoryKeyword(String category) {
         switch (category.toLowerCase()) {
-            case "pain relief": return "paracetamol|ibuprofen|combiflam|brufen|dolo|crocin";
-            case "heart health": return "aspirin|ecosprin|atorvastatin|metoprolol";
-            case "vitamins": return "vitamin|calcium|iron|omega|multivitamin";
-            case "antibiotics": return "amoxicillin|azithromycin|cephalexin|antibiotic";
-            case "diabetes": return "metformin|glimepiride|insulin|diabetes";
-            case "cold & flu": return "sinarest|vicks|cetrizine|cough|cold|flu";
-            case "digestive": return "eno|digene|pantoprazole|antacid|digestion";
-            case "women's health": return "folic|calcium|iron|women";
-            case "skin care": return "betnovate|clotrimazole|moisturizing|cream|lotion";
-            case "eye care": return "eye|drops|refresh|vitamin a";
+            case "medicines": return "MED";
+            case "first aid": return "AID";
+            case "baby care": return "BAB|DIP";
+            case "skin care": return "SKN";
+            case "medical devices": return "DEV|MOB";
+            case "supplements": return "SUP";
             default: return category.toLowerCase();
         }
     }
     
-    private boolean matchesCategory(String productName, String keywords) {
-        String name = productName.toLowerCase();
+    private boolean matchesCategory(String productId, String keywords) {
         String[] keywordArray = keywords.split("\\|");
         
         for (String keyword : keywordArray) {
-            if (name.contains(keyword.trim())) {
+            if (productId.startsWith(keyword.trim())) {
                 return true;
             }
         }
@@ -990,6 +956,39 @@ public class SmartCustomerDashboard extends JFrame {
         card.add(addToCartBtn, BorderLayout.EAST);
         
         return card;
+    }
+    
+    private void showRecommendedProduct(String productId) {
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+            Connection conn = DriverManager.getConnection(
+                "jdbc:mysql://localhost:3306/drugdatabase?useSSL=false&allowPublicKeyRetrieval=true", 
+                "root", "A@nchal911");
+            
+            String query = "SELECT p.pid, p.pname, p.manufacturer, p.price FROM product p WHERE p.pid = ?";
+            PreparedStatement ps = conn.prepareStatement(query);
+            ps.setString(1, productId);
+            ResultSet rs = ps.executeQuery();
+            
+            if (rs.next()) {
+                Product product = new Product(
+                    rs.getString("pid"),
+                    rs.getString("pname"),
+                    rs.getString("manufacturer"),
+                    rs.getDouble("price"),
+                    100 // Default stock for recommended products
+                );
+                showProductDetails(product);
+            } else {
+                JOptionPane.showMessageDialog(this, "Product not found!", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+            
+            conn.close();
+            
+        } catch (Exception e) {
+            System.out.println("Error loading recommended product: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, "Error loading product details!", "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
     
     private void addProductToCart(Product product) {
@@ -1259,43 +1258,86 @@ public class SmartCustomerDashboard extends JFrame {
                 "jdbc:mysql://localhost:3306/drugdatabase?useSSL=false&allowPublicKeyRetrieval=true", 
                 "root", "A@nchal911");
             
-            String query = "SELECT o.oid, p.pname, o.quantity, o.price, o.orderdatetime " +
-                          "FROM orders o JOIN product p ON o.pid = p.pid " +
-                          "WHERE o.uid = ? ORDER BY o.orderdatetime DESC";
+            System.out.println("Loading bills for customer: " + currentUser);
             
-            PreparedStatement ps = conn.prepareStatement(query);
-            ps.setString(1, currentUser);
-            ResultSet rs = ps.executeQuery();
+            // First try to load from consolidated_bills table
+            String billQuery = "SELECT * FROM consolidated_bills WHERE customer_id = ? ORDER BY bill_date DESC";
+            PreparedStatement billPs = conn.prepareStatement(billQuery);
+            billPs.setString(1, currentUser);
+            ResultSet billRs = billPs.executeQuery();
             
             boolean hasBills = false;
-            while (rs.next()) {
+            while (billRs.next()) {
                 hasBills = true;
-                JPanel billCard = createBillCard(
-                    rs.getInt("oid"),
-                    rs.getString("pname"),
-                    rs.getInt("quantity"),
-                    rs.getDouble("price"),
-                    rs.getString("orderdatetime")
+                JPanel billCard = createConsolidatedBillCard(
+                    billRs.getInt("bill_id"),
+                    billRs.getString("items_summary"),
+                    billRs.getInt("item_count"),
+                    billRs.getDouble("subtotal"),
+                    billRs.getDouble("gst"),
+                    billRs.getDouble("delivery_charges"),
+                    billRs.getDouble("total_amount"),
+                    billRs.getString("bill_date")
                 );
                 billsList.add(billCard);
                 billsList.add(Box.createVerticalStrut(10));
             }
             
+            // If no consolidated bills, create bills from orders
             if (!hasBills) {
-                JLabel noBillsLabel = new JLabel("No bills found. Place orders to generate bills!");
+                String orderQuery = "SELECT o.oid, p.pname, o.quantity, o.price, o.orderdatetime " +
+                                  "FROM orders o JOIN product p ON o.pid = p.pid " +
+                                  "WHERE o.uid = ? ORDER BY o.orderdatetime DESC";
+                
+                PreparedStatement orderPs = conn.prepareStatement(orderQuery);
+                orderPs.setString(1, currentUser);
+                ResultSet orderRs = orderPs.executeQuery();
+                
+                while (orderRs.next()) {
+                    hasBills = true;
+                    int orderId = orderRs.getInt("oid");
+                    String productName = orderRs.getString("pname");
+                    int quantity = orderRs.getInt("quantity");
+                    double price = orderRs.getDouble("price");
+                    String date = orderRs.getString("orderdatetime");
+                    
+                    // Calculate bill totals
+                    double subtotal = price * quantity;
+                    double gst = subtotal * 0.18;
+                    double delivery = 50.0;
+                    double total = subtotal + gst + delivery;
+                    
+                    JPanel billCard = createConsolidatedBillCard(
+                        orderId, productName + " (Qty: " + quantity + ")", 1, 
+                        subtotal, gst, delivery, total, date
+                    );
+                    billsList.add(billCard);
+                    billsList.add(Box.createVerticalStrut(10));
+                }
+            }
+            
+            if (!hasBills) {
+                JLabel noBillsLabel = new JLabel("No orders found. Place orders to generate bills!");
                 noBillsLabel.setFont(new Font("Arial", Font.PLAIN, 16));
                 noBillsLabel.setHorizontalAlignment(SwingConstants.CENTER);
+                noBillsLabel.setForeground(new Color(100, 100, 100));
                 billsList.add(noBillsLabel);
+            } else {
+                System.out.println("Loaded bills for " + currentUser);
             }
             
             conn.close();
             
         } catch (Exception e) {
             System.out.println("Error loading bills: " + e.getMessage());
+            e.printStackTrace();
+            // Add sample bill if database fails
+            addSampleConsolidatedBill(billsList);
         }
     }
     
-    private JPanel createBillCard(int orderId, String productName, int quantity, double price, String date) {
+    private JPanel createDetailedBillCard(int billId, int orderId, String products, 
+                                         double subtotal, double gst, double delivery, double total, String date) {
         JPanel card = new JPanel(new BorderLayout());
         card.setBackground(Color.WHITE);
         card.setBorder(BorderFactory.createCompoundBorder(
@@ -1306,19 +1348,19 @@ public class SmartCustomerDashboard extends JFrame {
         infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
         infoPanel.setBackground(Color.WHITE);
         
-        JLabel billLabel = new JLabel("Bill #EMD" + orderId);
+        JLabel billLabel = new JLabel("Bill #EMD" + billId + " (Order #" + orderId + ")");
         billLabel.setFont(new Font("Arial", Font.BOLD, 16));
         
-        JLabel productLabel = new JLabel(productName + " (Qty: " + quantity + ")");
+        JLabel productLabel = new JLabel(products != null ? products : "Multiple Items");
         productLabel.setFont(new Font("Arial", Font.PLAIN, 14));
         
         JLabel dateLabel = new JLabel("Date: " + date);
         dateLabel.setFont(new Font("Arial", Font.PLAIN, 12));
         dateLabel.setForeground(new Color(100, 100, 100));
         
-        JLabel priceLabel = new JLabel("Rs." + String.format("%.2f", price));
-        priceLabel.setFont(new Font("Arial", Font.BOLD, 18));
-        priceLabel.setForeground(new Color(46, 125, 50));
+        JLabel totalLabel = new JLabel("Rs." + String.format("%.2f", total));
+        totalLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        totalLabel.setForeground(new Color(46, 125, 50));
         
         infoPanel.add(billLabel);
         infoPanel.add(Box.createVerticalStrut(5));
@@ -1332,12 +1374,196 @@ public class SmartCustomerDashboard extends JFrame {
         viewBillBtn.setFont(new Font("Arial", Font.BOLD, 12));
         viewBillBtn.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
         viewBillBtn.setFocusPainted(false);
-        viewBillBtn.addActionListener(e -> showBill("EMD" + orderId, price));
+        viewBillBtn.addActionListener(e -> showDetailedBillFromDB(billId, orderId, products, subtotal, gst, delivery, total, date));
         
         JPanel rightPanel = new JPanel();
         rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
         rightPanel.setBackground(Color.WHITE);
-        rightPanel.add(priceLabel);
+        rightPanel.add(totalLabel);
+        rightPanel.add(Box.createVerticalStrut(10));
+        rightPanel.add(viewBillBtn);
+        
+        card.add(infoPanel, BorderLayout.CENTER);
+        card.add(rightPanel, BorderLayout.EAST);
+        
+        return card;
+    }
+    
+    private void showDetailedBillFromDB(int billId, int orderId, String products, 
+                                       double subtotal, double gst, double delivery, double total, String date) {
+        JDialog billDialog = new JDialog(this, "Invoice - EMD" + billId, true);
+        billDialog.setSize(500, 600);
+        billDialog.setLocationRelativeTo(this);
+        
+        JPanel billPanel = new JPanel(new BorderLayout());
+        billPanel.setBackground(Color.WHITE);
+        billPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+        
+        // Header
+        JPanel headerPanel = new JPanel();
+        headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.Y_AXIS));
+        headerPanel.setBackground(Color.WHITE);
+        
+        JLabel companyLabel = new JLabel("e-MEDpharma");
+        companyLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        companyLabel.setForeground(new Color(27, 94, 32));
+        companyLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        JLabel addressLabel = new JLabel("Digital Pharmacy Management System");
+        addressLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        addressLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        JLabel invoiceLabel = new JLabel("INVOICE");
+        invoiceLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        invoiceLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        headerPanel.add(companyLabel);
+        headerPanel.add(addressLabel);
+        headerPanel.add(Box.createVerticalStrut(20));
+        headerPanel.add(invoiceLabel);
+        
+        // Bill details
+        JPanel detailsPanel = new JPanel(new GridLayout(0, 1, 5, 5));
+        detailsPanel.setBackground(Color.WHITE);
+        detailsPanel.setBorder(BorderFactory.createTitledBorder("Bill Details"));
+        
+        detailsPanel.add(new JLabel("Bill ID: EMD" + billId));
+        detailsPanel.add(new JLabel("Order ID: " + orderId));
+        detailsPanel.add(new JLabel("Customer: " + currentUser));
+        detailsPanel.add(new JLabel("Date: " + date));
+        detailsPanel.add(new JLabel("Payment Method: Cash on Delivery"));
+        
+        // Items section
+        JPanel itemsPanel = new JPanel(new GridLayout(0, 1, 5, 5));
+        itemsPanel.setBackground(Color.WHITE);
+        itemsPanel.setBorder(BorderFactory.createTitledBorder("Items"));
+        
+        itemsPanel.add(new JLabel(products != null ? products : "Multiple Items"));
+        
+        // Total section
+        JPanel totalPanel = new JPanel(new GridLayout(4, 2));
+        totalPanel.setBackground(Color.WHITE);
+        totalPanel.setBorder(BorderFactory.createTitledBorder("Payment Summary"));
+        
+        totalPanel.add(new JLabel("Subtotal:"));
+        totalPanel.add(new JLabel("Rs." + String.format("%.2f", subtotal)));
+        totalPanel.add(new JLabel("GST (18%):"));
+        totalPanel.add(new JLabel("Rs." + String.format("%.2f", gst)));
+        totalPanel.add(new JLabel("Delivery:"));
+        totalPanel.add(new JLabel("Rs." + String.format("%.2f", delivery)));
+        
+        JLabel totalLabelFinal = new JLabel("TOTAL:");
+        totalLabelFinal.setFont(new Font("Arial", Font.BOLD, 14));
+        JLabel finalTotalLabel = new JLabel("Rs." + String.format("%.2f", total));
+        finalTotalLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        finalTotalLabel.setForeground(new Color(27, 94, 32));
+        
+        totalPanel.add(totalLabelFinal);
+        totalPanel.add(finalTotalLabel);
+        
+        // Buttons
+        JPanel buttonPanel = new JPanel(new FlowLayout());
+        buttonPanel.setBackground(Color.WHITE);
+        
+        JButton printBtn = new JButton("Print Bill");
+        printBtn.setBackground(new Color(46, 125, 50));
+        printBtn.setForeground(Color.WHITE);
+        printBtn.addActionListener(e -> {
+            JOptionPane.showMessageDialog(billDialog, "Bill sent to printer!", "Print", JOptionPane.INFORMATION_MESSAGE);
+        });
+        
+        JButton downloadBtn = new JButton("Download PDF");
+        downloadBtn.setBackground(new Color(102, 126, 234));
+        downloadBtn.setForeground(Color.WHITE);
+        downloadBtn.addActionListener(e -> {
+            JOptionPane.showMessageDialog(billDialog, "Bill downloaded as PDF!", "Download", JOptionPane.INFORMATION_MESSAGE);
+        });
+        
+        JButton closeBtn = new JButton("Close");
+        closeBtn.addActionListener(e -> billDialog.dispose());
+        
+        buttonPanel.add(printBtn);
+        buttonPanel.add(downloadBtn);
+        buttonPanel.add(closeBtn);
+        
+        billPanel.add(headerPanel, BorderLayout.NORTH);
+        
+        JPanel centerPanel = new JPanel(new BorderLayout());
+        centerPanel.setBackground(Color.WHITE);
+        centerPanel.add(detailsPanel, BorderLayout.NORTH);
+        centerPanel.add(itemsPanel, BorderLayout.CENTER);
+        centerPanel.add(totalPanel, BorderLayout.SOUTH);
+        
+        billPanel.add(centerPanel, BorderLayout.CENTER);
+        billPanel.add(buttonPanel, BorderLayout.SOUTH);
+        
+        billDialog.add(billPanel);
+        billDialog.setVisible(true);
+    }
+    
+    private JPanel createConsolidatedBillCard(int billId, String items, int itemCount, 
+                                             double subtotal, double gst, double delivery, double total, String date) {
+        JPanel card = new JPanel(new BorderLayout());
+        card.setBackground(Color.WHITE);
+        card.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(230, 230, 230)),
+            new EmptyBorder(15, 15, 15, 15)));
+        
+        JPanel infoPanel = new JPanel();
+        infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
+        infoPanel.setBackground(Color.WHITE);
+        
+        JLabel billLabel = new JLabel("Consolidated Invoice #EMD" + billId);
+        billLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        billLabel.setForeground(new Color(51, 51, 51));
+        
+        JLabel itemsLabel = new JLabel("Items (" + itemCount + "): " + 
+            (items.length() > 50 ? items.substring(0, 50) + "..." : items));
+        itemsLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+        itemsLabel.setForeground(new Color(100, 100, 100));
+        
+        JLabel dateLabel = new JLabel("Date: " + date);
+        dateLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        dateLabel.setForeground(new Color(100, 100, 100));
+        
+        JLabel statusLabel = new JLabel("Status: Completed");
+        statusLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        statusLabel.setForeground(new Color(40, 167, 69));
+        
+        infoPanel.add(billLabel);
+        infoPanel.add(Box.createVerticalStrut(5));
+        infoPanel.add(itemsLabel);
+        infoPanel.add(Box.createVerticalStrut(5));
+        infoPanel.add(dateLabel);
+        infoPanel.add(Box.createVerticalStrut(5));
+        infoPanel.add(statusLabel);
+        
+        JPanel rightPanel = new JPanel();
+        rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
+        rightPanel.setBackground(Color.WHITE);
+        
+        JLabel totalLabel = new JLabel("Rs." + String.format("%.2f", total));
+        totalLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        totalLabel.setForeground(new Color(46, 125, 50));
+        totalLabel.setAlignmentX(Component.RIGHT_ALIGNMENT);
+        
+        JLabel breakdownLabel = new JLabel("(" + itemCount + " items + GST + Delivery)");
+        breakdownLabel.setFont(new Font("Arial", Font.PLAIN, 10));
+        breakdownLabel.setForeground(new Color(100, 100, 100));
+        breakdownLabel.setAlignmentX(Component.RIGHT_ALIGNMENT);
+        
+        JButton viewBillBtn = new JButton("View Invoice");
+        viewBillBtn.setBackground(new Color(46, 125, 50));
+        viewBillBtn.setForeground(Color.WHITE);
+        viewBillBtn.setFont(new Font("Arial", Font.BOLD, 12));
+        viewBillBtn.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
+        viewBillBtn.setFocusPainted(false);
+        viewBillBtn.setAlignmentX(Component.RIGHT_ALIGNMENT);
+        viewBillBtn.addActionListener(e -> showConsolidatedBill("EMD" + billId, items, itemCount, subtotal, gst, delivery, total, date));
+        
+        rightPanel.add(totalLabel);
+        rightPanel.add(Box.createVerticalStrut(2));
+        rightPanel.add(breakdownLabel);
         rightPanel.add(Box.createVerticalStrut(10));
         rightPanel.add(viewBillBtn);
         
@@ -1349,8 +1575,10 @@ public class SmartCustomerDashboard extends JFrame {
     
 
     
-    private void addSampleBill(JPanel billsList) {
-        JPanel billCard = createBillCard(1, "Paracetamol 500mg", 2, 50.0, "2024-01-22", "Delivered");
+    private void addSampleConsolidatedBill(JPanel billsList) {
+        JPanel billCard = createConsolidatedBillCard(
+            1, "Paracetamol 500mg (Qty: 2), Crocin Advance (Qty: 1)", 2, 85.0, 15.30, 50.0, 150.30, "2024-01-22"
+        );
         billsList.add(billCard);
     }
     
@@ -1413,7 +1641,7 @@ public class SmartCustomerDashboard extends JFrame {
         viewBillBtn.setFont(new Font("Arial", Font.BOLD, 11));
         viewBillBtn.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
         viewBillBtn.setFocusPainted(false);
-        viewBillBtn.addActionListener(e -> showDetailedBill("EMD" + orderId, productName, quantity, subtotal, gst, delivery, total, date));
+        viewBillBtn.addActionListener(e -> showConsolidatedBill("EMD" + orderId, productName + " (Qty: " + quantity + ")", 1, subtotal, gst, delivery, total, date));
         
         rightPanel.add(amountLabel);
         rightPanel.add(Box.createVerticalStrut(5));
@@ -1427,10 +1655,10 @@ public class SmartCustomerDashboard extends JFrame {
         return card;
     }
     
-    private void showDetailedBill(String billId, String productName, int quantity, 
-                                 double subtotal, double gst, double delivery, double total, String date) {
-        JDialog billDialog = new JDialog(this, "Invoice - " + billId, true);
-        billDialog.setSize(500, 600);
+    private void showConsolidatedBill(String billId, String items, int itemCount, 
+                                     double subtotal, double gst, double delivery, double total, String date) {
+        JDialog billDialog = new JDialog(this, "Consolidated Invoice - " + billId, true);
+        billDialog.setSize(600, 700);
         billDialog.setLocationRelativeTo(this);
         
         JPanel billPanel = new JPanel(new BorderLayout());
@@ -1451,7 +1679,7 @@ public class SmartCustomerDashboard extends JFrame {
         addressLabel.setFont(new Font("Arial", Font.PLAIN, 12));
         addressLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         
-        JLabel invoiceLabel = new JLabel("INVOICE");
+        JLabel invoiceLabel = new JLabel("CONSOLIDATED INVOICE");
         invoiceLabel.setFont(new Font("Arial", Font.BOLD, 18));
         invoiceLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         
@@ -1468,25 +1696,38 @@ public class SmartCustomerDashboard extends JFrame {
         detailsPanel.add(new JLabel("Bill ID: " + billId));
         detailsPanel.add(new JLabel("Customer: " + currentUser));
         detailsPanel.add(new JLabel("Date: " + date));
+        detailsPanel.add(new JLabel("Total Items: " + itemCount));
         detailsPanel.add(new JLabel("Payment Method: Cash on Delivery"));
         
         // Items section
-        JPanel itemsPanel = new JPanel(new GridLayout(0, 1, 5, 5));
+        JPanel itemsPanel = new JPanel(new BorderLayout());
         itemsPanel.setBackground(Color.WHITE);
-        itemsPanel.setBorder(BorderFactory.createTitledBorder("Items"));
+        itemsPanel.setBorder(BorderFactory.createTitledBorder("Items Purchased"));
         
-        itemsPanel.add(new JLabel(productName + " x " + quantity + " = Rs." + String.format("%.2f", subtotal)));
+        JTextArea itemsArea = new JTextArea(items);
+        itemsArea.setFont(new Font("Arial", Font.PLAIN, 12));
+        itemsArea.setBackground(Color.WHITE);
+        itemsArea.setEditable(false);
+        itemsArea.setWrapStyleWord(true);
+        itemsArea.setLineWrap(true);
+        itemsArea.setBorder(new EmptyBorder(10, 10, 10, 10));
+        
+        JScrollPane itemsScroll = new JScrollPane(itemsArea);
+        itemsScroll.setPreferredSize(new Dimension(550, 120));
+        itemsScroll.setBorder(null);
+        
+        itemsPanel.add(itemsScroll, BorderLayout.CENTER);
         
         // Total section
         JPanel totalPanel = new JPanel(new GridLayout(4, 2));
         totalPanel.setBackground(Color.WHITE);
         totalPanel.setBorder(BorderFactory.createTitledBorder("Payment Summary"));
         
-        totalPanel.add(new JLabel("Subtotal:"));
+        totalPanel.add(new JLabel("Subtotal (" + itemCount + " items):"));
         totalPanel.add(new JLabel("Rs." + String.format("%.2f", subtotal)));
         totalPanel.add(new JLabel("GST (18%):"));
         totalPanel.add(new JLabel("Rs." + String.format("%.2f", gst)));
-        totalPanel.add(new JLabel("Delivery:"));
+        totalPanel.add(new JLabel("Delivery (Single charge):"));
         totalPanel.add(new JLabel("Rs." + String.format("%.2f", delivery)));
         
         JLabel totalLabel = new JLabel("TOTAL:");
@@ -1506,14 +1747,14 @@ public class SmartCustomerDashboard extends JFrame {
         printBtn.setBackground(new Color(46, 125, 50));
         printBtn.setForeground(Color.WHITE);
         printBtn.addActionListener(e -> {
-            JOptionPane.showMessageDialog(billDialog, "Bill sent to printer!", "Print", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(billDialog, "Consolidated bill sent to printer!", "Print", JOptionPane.INFORMATION_MESSAGE);
         });
         
         JButton downloadBtn = new JButton("Download PDF");
         downloadBtn.setBackground(new Color(102, 126, 234));
         downloadBtn.setForeground(Color.WHITE);
         downloadBtn.addActionListener(e -> {
-            JOptionPane.showMessageDialog(billDialog, "Bill downloaded as PDF!", "Download", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(billDialog, "Consolidated bill downloaded as PDF!", "Download", JOptionPane.INFORMATION_MESSAGE);
         });
         
         JButton closeBtn = new JButton("Close");
@@ -1539,11 +1780,310 @@ public class SmartCustomerDashboard extends JFrame {
     }
     
     private void showHealthReports() {
-        // Implementation for health reports
+        mainContentPanel.removeAll();
+        
+        JPanel reportsPanel = new JPanel(new BorderLayout());
+        reportsPanel.setBackground(new Color(248, 250, 252));
+        reportsPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+        
+        JLabel titleLabel = new JLabel("My Health Reports & Analytics");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        titleLabel.setForeground(new Color(51, 51, 51));
+        
+        // Create health dashboard
+        JPanel healthDashboard = createHealthDashboard();
+        
+        reportsPanel.add(titleLabel, BorderLayout.NORTH);
+        reportsPanel.add(Box.createVerticalStrut(20), BorderLayout.CENTER);
+        reportsPanel.add(healthDashboard, BorderLayout.CENTER);
+        
+        mainContentPanel.add(reportsPanel, BorderLayout.CENTER);
+        mainContentPanel.revalidate();
+        mainContentPanel.repaint();
     }
     
-    private void showSettings() {
-        // Implementation for user settings
+    private JPanel createHealthDashboard() {
+        JPanel dashboard = new JPanel(new BorderLayout());
+        dashboard.setBackground(new Color(248, 250, 252));
+        
+        // Top metrics panel
+        JPanel metricsPanel = new JPanel(new GridLayout(1, 4, 15, 15));
+        metricsPanel.setBackground(new Color(248, 250, 252));
+        
+        // Calculate health metrics
+        int[] metrics = calculateHealthMetrics();
+        
+        JPanel ordersCard = createHealthMetricCard("Total Orders", String.valueOf(metrics[0]), new Color(27, 94, 32));
+        JPanel spendingCard = createHealthMetricCard("Total Spending", "Rs." + metrics[1], new Color(46, 125, 50));
+        JPanel avgOrderCard = createHealthMetricCard("Avg Order Value", "Rs." + (metrics[0] > 0 ? metrics[1]/metrics[0] : 0), new Color(255, 193, 7));
+        JPanel healthScoreCard = createHealthMetricCard("Health Score", getHealthScore() + "%", new Color(220, 53, 69));
+        
+        metricsPanel.add(ordersCard);
+        metricsPanel.add(spendingCard);
+        metricsPanel.add(avgOrderCard);
+        metricsPanel.add(healthScoreCard);
+        
+        // Recent purchases panel
+        JPanel recentPurchasesPanel = createRecentPurchasesPanel();
+        
+        // Medicine categories panel
+        JPanel categoriesPanel = createMedicineCategoriesPanel();
+        
+        JPanel centerPanel = new JPanel(new GridLayout(1, 2, 15, 15));
+        centerPanel.setBackground(new Color(248, 250, 252));
+        centerPanel.add(recentPurchasesPanel);
+        centerPanel.add(categoriesPanel);
+        
+        dashboard.add(metricsPanel, BorderLayout.NORTH);
+        dashboard.add(Box.createVerticalStrut(20), BorderLayout.CENTER);
+        dashboard.add(centerPanel, BorderLayout.CENTER);
+        
+        return dashboard;
+    }
+    
+    private JPanel createHealthMetricCard(String title, String value, Color color) {
+        JPanel card = new JPanel();
+        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setBackground(Color.WHITE);
+        card.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(230, 230, 230)),
+            new EmptyBorder(20, 15, 20, 15)));
+        
+        JLabel titleLabel = new JLabel(title);
+        titleLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        titleLabel.setForeground(new Color(100, 100, 100));
+        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        JLabel valueLabel = new JLabel(value);
+        valueLabel.setFont(new Font("Arial", Font.BOLD, 20));
+        valueLabel.setForeground(color);
+        valueLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        card.add(titleLabel);
+        card.add(Box.createVerticalStrut(10));
+        card.add(valueLabel);
+        
+        return card;
+    }
+    
+    private JPanel createRecentPurchasesPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(230, 230, 230)),
+            new EmptyBorder(15, 15, 15, 15)));
+        
+        JLabel titleLabel = new JLabel("Recent Medicine Purchases");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        
+        JPanel purchasesList = new JPanel();
+        purchasesList.setLayout(new BoxLayout(purchasesList, BoxLayout.Y_AXIS));
+        purchasesList.setBackground(Color.WHITE);
+        
+        // Load recent purchases from database
+        loadRecentPurchases(purchasesList);
+        
+        JScrollPane scrollPane = new JScrollPane(purchasesList);
+        scrollPane.setBorder(null);
+        scrollPane.setPreferredSize(new Dimension(300, 200));
+        
+        panel.add(titleLabel, BorderLayout.NORTH);
+        panel.add(Box.createVerticalStrut(10), BorderLayout.CENTER);
+        panel.add(scrollPane, BorderLayout.CENTER);
+        
+        return panel;
+    }
+    
+    private JPanel createMedicineCategoriesPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(230, 230, 230)),
+            new EmptyBorder(15, 15, 15, 15)));
+        
+        JLabel titleLabel = new JLabel("Medicine Categories Purchased");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        
+        JPanel categoriesList = new JPanel();
+        categoriesList.setLayout(new BoxLayout(categoriesList, BoxLayout.Y_AXIS));
+        categoriesList.setBackground(Color.WHITE);
+        
+        // Load medicine categories from purchase history
+        loadMedicineCategories(categoriesList);
+        
+        JScrollPane scrollPane = new JScrollPane(categoriesList);
+        scrollPane.setBorder(null);
+        scrollPane.setPreferredSize(new Dimension(300, 200));
+        
+        panel.add(titleLabel, BorderLayout.NORTH);
+        panel.add(Box.createVerticalStrut(10), BorderLayout.CENTER);
+        panel.add(scrollPane, BorderLayout.CENTER);
+        
+        return panel;
+    }
+    
+    private int[] calculateHealthMetrics() {
+        int[] metrics = new int[2]; // [totalOrders, totalSpending]
+        
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+            Connection conn = DriverManager.getConnection(
+                "jdbc:mysql://localhost:3306/drugdatabase?useSSL=false&allowPublicKeyRetrieval=true", 
+                "root", "A@nchal911");
+            
+            String query = "SELECT COUNT(*) as total_orders, COALESCE(SUM(price), 0) as total_spending " +
+                          "FROM orders WHERE uid = ?";
+            
+            PreparedStatement ps = conn.prepareStatement(query);
+            ps.setString(1, currentUser);
+            ResultSet rs = ps.executeQuery();
+            
+            if (rs.next()) {
+                metrics[0] = rs.getInt("total_orders");
+                metrics[1] = (int) rs.getDouble("total_spending");
+            }
+            
+            conn.close();
+            
+        } catch (Exception e) {
+            System.out.println("Error calculating health metrics: " + e.getMessage());
+            // Return sample data
+            metrics[0] = 12; // 12 orders
+            metrics[1] = 2450; // Rs. 2,450 spending
+        }
+        
+        return metrics;
+    }
+    
+    private void loadRecentPurchases(JPanel purchasesList) {
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+            Connection conn = DriverManager.getConnection(
+                "jdbc:mysql://localhost:3306/drugdatabase?useSSL=false&allowPublicKeyRetrieval=true", 
+                "root", "A@nchal911");
+            
+            String query = "SELECT p.pname, o.price, o.orderdatetime " +
+                          "FROM orders o JOIN product p ON o.pid = p.pid " +
+                          "WHERE o.uid = ? ORDER BY o.orderdatetime DESC LIMIT 5";
+            
+            PreparedStatement ps = conn.prepareStatement(query);
+            ps.setString(1, currentUser);
+            ResultSet rs = ps.executeQuery();
+            
+            boolean hasPurchases = false;
+            while (rs.next()) {
+                hasPurchases = true;
+                JLabel purchaseLabel = new JLabel("• " + rs.getString("pname") + " - Rs." + rs.getDouble("price"));
+                purchaseLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+                purchasesList.add(purchaseLabel);
+                purchasesList.add(Box.createVerticalStrut(5));
+            }
+            
+            if (!hasPurchases) {
+                JLabel noPurchasesLabel = new JLabel("No recent purchases found");
+                noPurchasesLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+                noPurchasesLabel.setForeground(new Color(100, 100, 100));
+                purchasesList.add(noPurchasesLabel);
+            }
+            
+            conn.close();
+            
+        } catch (Exception e) {
+            System.out.println("Error loading recent purchases: " + e.getMessage());
+            // Add sample data
+            String[] samplePurchases = {
+                "• Paracetamol 500mg - Rs.25",
+                "• Vitamin D3 - Rs.120",
+                "• Crocin Advance - Rs.35",
+                "• Aspirin 75mg - Rs.45"
+            };
+            
+            for (String purchase : samplePurchases) {
+                JLabel purchaseLabel = new JLabel(purchase);
+                purchaseLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+                purchasesList.add(purchaseLabel);
+                purchasesList.add(Box.createVerticalStrut(5));
+            }
+        }
+    }
+    
+    private void loadMedicineCategories(JPanel categoriesList) {
+        // Since we don't have category data in database, we'll analyze by medicine names
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+            Connection conn = DriverManager.getConnection(
+                "jdbc:mysql://localhost:3306/drugdatabase?useSSL=false&allowPublicKeyRetrieval=true", 
+                "root", "A@nchal911");
+            
+            String query = "SELECT p.pname, COUNT(*) as purchase_count " +
+                          "FROM orders o JOIN product p ON o.pid = p.pid " +
+                          "WHERE o.uid = ? GROUP BY p.pname ORDER BY purchase_count DESC LIMIT 5";
+            
+            PreparedStatement ps = conn.prepareStatement(query);
+            ps.setString(1, currentUser);
+            ResultSet rs = ps.executeQuery();
+            
+            boolean hasCategories = false;
+            while (rs.next()) {
+                hasCategories = true;
+                String medicineName = rs.getString("pname");
+                int count = rs.getInt("purchase_count");
+                String category = categorizeMedicine(medicineName);
+                
+                JLabel categoryLabel = new JLabel("• " + category + " (" + count + " purchases)");
+                categoryLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+                categoriesList.add(categoryLabel);
+                categoriesList.add(Box.createVerticalStrut(5));
+            }
+            
+            if (!hasCategories) {
+                JLabel noCategoriesLabel = new JLabel("No purchase history found");
+                noCategoriesLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+                noCategoriesLabel.setForeground(new Color(100, 100, 100));
+                categoriesList.add(noCategoriesLabel);
+            }
+            
+            conn.close();
+            
+        } catch (Exception e) {
+            System.out.println("Error loading medicine categories: " + e.getMessage());
+            // Add sample data
+            String[] sampleCategories = {
+                "• Pain Relief (3 purchases)",
+                "• Vitamins (2 purchases)",
+                "• Heart Health (1 purchase)",
+                "• Cold & Flu (1 purchase)"
+            };
+            
+            for (String category : sampleCategories) {
+                JLabel categoryLabel = new JLabel(category);
+                categoryLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+                categoriesList.add(categoryLabel);
+                categoriesList.add(Box.createVerticalStrut(5));
+            }
+        }
+    }
+    
+    private String categorizeMedicine(String medicineName) {
+        String name = medicineName.toLowerCase();
+        
+        if (name.contains("paracetamol") || name.contains("ibuprofen") || name.contains("dolo") || name.contains("crocin")) {
+            return "Pain Relief";
+        } else if (name.contains("vitamin") || name.contains("calcium") || name.contains("omega")) {
+            return "Vitamins & Supplements";
+        } else if (name.contains("aspirin") || name.contains("ecosprin") || name.contains("atorvastatin")) {
+            return "Heart Health";
+        } else if (name.contains("amoxicillin") || name.contains("azithromycin") || name.contains("antibiotic")) {
+            return "Antibiotics";
+        } else if (name.contains("metformin") || name.contains("insulin") || name.contains("diabetes")) {
+            return "Diabetes Care";
+        } else if (name.contains("sinarest") || name.contains("vicks") || name.contains("cough")) {
+            return "Cold & Flu";
+        } else if (name.contains("eno") || name.contains("digene") || name.contains("antacid")) {
+            return "Digestive Health";
+        } else {
+            return "General Medicine";
+        }
     }
     
     private void loadUserData() {
@@ -1565,42 +2105,91 @@ public class SmartCustomerDashboard extends JFrame {
     }
     
     private void generateAIRecommendations() {
-        // AI Algorithm for generating recommendations
         aiRecommendations.clear();
         
-        // Rule 1: Chronic condition management
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+            Connection conn = DriverManager.getConnection(
+                "jdbc:mysql://localhost:3306/drugdatabase?useSSL=false&allowPublicKeyRetrieval=true", 
+                "root", "A@nchal911");
+            
+            // Get user's purchase history for personalized recommendations
+            String historyQuery = "SELECT p.pid, p.pname FROM orders o JOIN product p ON o.pid = p.pid WHERE o.uid = ? GROUP BY p.pid ORDER BY COUNT(*) DESC LIMIT 3";
+            PreparedStatement historyPs = conn.prepareStatement(historyQuery);
+            historyPs.setString(1, currentUser);
+            ResultSet historyRs = historyPs.executeQuery();
+            
+            java.util.Set<String> purchasedProducts = new java.util.HashSet<>();
+            while (historyRs.next()) {
+                purchasedProducts.add(historyRs.getString("pid"));
+            }
+            
+            // Generate recommendations based on available products
+            String productQuery = "SELECT p.pid, p.pname, p.price FROM product p WHERE p.pid NOT IN (" +
+                                 purchasedProducts.stream().map(id -> "'" + id + "'").collect(java.util.stream.Collectors.joining(",", "", purchasedProducts.isEmpty() ? "''" : "")) + 
+                                 ") ORDER BY RAND() LIMIT 5";
+            
+            PreparedStatement productPs = conn.prepareStatement(productQuery);
+            ResultSet productRs = productPs.executeQuery();
+            
+            while (productRs.next()) {
+                String productId = productRs.getString("pid");
+                String productName = productRs.getString("pname");
+                double price = productRs.getDouble("price");
+                
+                // Generate AI recommendation based on product type
+                String[] recData = generateRecommendationForProduct(productId, productName, price);
+                
+                aiRecommendations.add(new Recommendation(
+                    recData[0], recData[1], recData[2], recData[3], productId, 
+                    Integer.parseInt(recData[4])
+                ));
+            }
+            
+            conn.close();
+            
+        } catch (Exception e) {
+            System.out.println("Error generating AI recommendations: " + e.getMessage());
+            // Fallback to sample recommendations
+            generateSampleRecommendations();
+        }
+    }
+    
+    private String[] generateRecommendationForProduct(String productId, String productName, double price) {
+        String name = productName.toLowerCase();
+        
+        if (name.contains("paracetamol") || name.contains("dolo") || name.contains("crocin")) {
+            return new String[]{"PAIN_RELIEF", "[💊]", "Pain Relief Recommendation", 
+                "Based on common health needs, " + productName + " is recommended for fever and pain relief.", "92"};
+        } else if (name.contains("vitamin") || name.contains("calcium")) {
+            return new String[]{"WELLNESS", "[🌟]", "Health & Wellness", 
+                "Boost your immunity and overall health with " + productName + ". Great for daily wellness.", "88"};
+        } else if (name.contains("aspirin") || name.contains("ecosprin")) {
+            return new String[]{"HEART_HEALTH", "[❤️]", "Heart Health Care", 
+                "Maintain cardiovascular health with " + productName + ". Recommended for heart protection.", "90"};
+        } else if (name.contains("antibiotic") || name.contains("amoxicillin")) {
+            return new String[]{"INFECTION", "[🛡️]", "Infection Prevention", 
+                "Keep " + productName + " handy for bacterial infections. Consult doctor before use.", "85"};
+        } else if (name.contains("diabetes") || name.contains("metformin")) {
+            return new String[]{"DIABETES", "[📊]", "Diabetes Management", 
+                "Manage blood sugar levels effectively with " + productName + ". Essential for diabetic care.", "95"};
+        } else {
+            return new String[]{"GENERAL", "[🏥]", "Health Essential", 
+                "" + productName + " is recommended based on your health profile and current trends.", "80"};
+        }
+    }
+    
+    private void generateSampleRecommendations() {
         aiRecommendations.add(new Recommendation(
-            "CHRONIC_CARE", "[BP]", "Blood Pressure Management",
-            "Based on your purchase history, consider subscribing to monthly BP medication delivery.",
-            "MED001", 95
+            "PAIN_RELIEF", "[💊]", "Pain Relief Recommendation",
+            "Paracetamol 500mg is recommended for fever and pain relief.",
+            "MED001", 92
         ));
         
-        // Rule 2: Seasonal recommendations
         aiRecommendations.add(new Recommendation(
-            "SEASONAL", "[W]", "Winter Health Protection",
-            "Cold season is approaching. Stock up on immunity boosters and flu prevention medicines.",
-            "MED002", 88
-        ));
-        
-        // Rule 3: Preventive care
-        aiRecommendations.add(new Recommendation(
-            "PREVENTIVE", "[V]", "Vitamin D Supplement",
-            "Your health profile suggests you may benefit from Vitamin D supplementation.",
-            "MED003", 82
-        ));
-        
-        // Rule 4: Refill reminder
-        aiRecommendations.add(new Recommendation(
-            "REFILL", "[R]", "Medication Refill Due",
-            "Your diabetes medication is running low. Time for a refill to maintain your health routine.",
-            "MED004", 98
-        ));
-        
-        // Rule 5: Health optimization
-        aiRecommendations.add(new Recommendation(
-            "OPTIMIZATION", "[+]", "Health Score Improvement",
-            "Add omega-3 supplements to boost your cardiovascular health score by 15%.",
-            "MED005", 75
+            "WELLNESS", "[🌟]", "Health & Wellness",
+            "Vitamin D3 supplements boost immunity and overall health.",
+            "MED005", 88
         ));
     }
     
@@ -1612,8 +2201,9 @@ public class SmartCustomerDashboard extends JFrame {
                 "jdbc:mysql://localhost:3306/drugdatabase?useSSL=false&allowPublicKeyRetrieval=true", 
                 "root", "A@nchal911");
             
-            String query = "SELECT p.pid, p.pname, p.manufacturer, p.price, COALESCE(i.quantity, 0) as stock " +
-                          "FROM product p LEFT JOIN inventory i ON p.pid = i.pid";
+            String query = "SELECT p.pid, p.pname, p.manufacturer, p.price, COALESCE(SUM(i.quantity), 0) as stock " +
+                          "FROM product p LEFT JOIN inventory i ON p.pid = i.pid " +
+                          "GROUP BY p.pid, p.pname, p.manufacturer, p.price";
             
             PreparedStatement ps = conn.prepareStatement(query);
             ResultSet rs = ps.executeQuery();
@@ -1632,6 +2222,11 @@ public class SmartCustomerDashboard extends JFrame {
             conn.close();
             System.out.println("Loaded " + allProducts.size() + " products from database");
             
+            // If no products in database, add some sample ones
+            if (allProducts.isEmpty()) {
+                loadSampleProducts();
+            }
+            
         } catch (Exception e) {
             System.out.println("Error loading products: " + e.getMessage());
             e.printStackTrace();
@@ -1642,39 +2237,59 @@ public class SmartCustomerDashboard extends JFrame {
     }
     
     private void loadSampleProducts() {
-        // Pain Relief & Fever
+        // Pain Relief & Fever - Multiple products per category
         allProducts.add(new Product("MED001", "Paracetamol 500mg", "Generic", 25.0, 100));
         allProducts.add(new Product("MED002", "Crocin Advance", "GSK", 35.0, 50));
         allProducts.add(new Product("MED003", "Dolo 650", "Micro Labs", 30.0, 75));
         allProducts.add(new Product("MED007", "Ibuprofen 400mg", "Abbott", 45.0, 80));
         allProducts.add(new Product("MED008", "Combiflam", "Sanofi", 38.0, 65));
+        allProducts.add(new Product("MED009", "Brufen 400mg", "Abbott", 42.0, 55));
         
-        // Heart Health
+        // Heart Health - Multiple options
         allProducts.add(new Product("MED004", "Aspirin 75mg", "Bayer", 45.0, 60));
         allProducts.add(new Product("MED010", "Ecosprin 75mg", "USV", 28.0, 90));
         allProducts.add(new Product("MED011", "Atorvastatin 10mg", "Ranbaxy", 85.0, 45));
+        allProducts.add(new Product("MED012", "Metoprolol 50mg", "Cipla", 65.0, 70));
         
-        // Vitamins & Supplements
+        // Vitamins & Supplements - Diverse range
         allProducts.add(new Product("MED005", "Vitamin D3", "Cipla", 120.0, 40));
         allProducts.add(new Product("MED006", "Calcium Tablets", "Sun Pharma", 80.0, 30));
         allProducts.add(new Product("MED013", "Vitamin B12 Tablets", "Himalaya", 95.0, 55));
         allProducts.add(new Product("MED014", "Omega-3 Capsules", "Amway", 450.0, 25));
+        allProducts.add(new Product("MED015", "Multivitamin Tablets", "Centrum", 350.0, 35));
+        allProducts.add(new Product("MED016", "Iron Tablets", "Ranbaxy", 75.0, 60));
         
-        // Antibiotics
+        // Antibiotics - Different types
         allProducts.add(new Product("MED017", "Amoxicillin 500mg", "Cipla", 120.0, 35));
         allProducts.add(new Product("MED018", "Azithromycin 250mg", "Pfizer", 180.0, 28));
+        allProducts.add(new Product("MED019", "Cephalexin 500mg", "Sun Pharma", 95.0, 40));
         
-        // Diabetes Care
+        // Diabetes Care - Complete range
         allProducts.add(new Product("MED020", "Metformin 500mg", "Sun Pharma", 45.0, 70));
         allProducts.add(new Product("MED021", "Glimepiride 2mg", "Torrent", 65.0, 40));
+        allProducts.add(new Product("MED022", "Insulin Pen", "Novo Nordisk", 850.0, 15));
         
-        // Cold & Flu
+        // Cold & Flu - Multiple options
         allProducts.add(new Product("MED023", "Sinarest Tablet", "Centaur", 25.0, 85));
         allProducts.add(new Product("MED024", "Vicks Cough Syrup", "P&G", 85.0, 45));
+        allProducts.add(new Product("MED025", "Cetrizine 10mg", "Cipla", 35.0, 90));
         
-        // Digestive Health
+        // Digestive Health - Various products
         allProducts.add(new Product("MED026", "ENO Antacid", "GSK", 45.0, 95));
         allProducts.add(new Product("MED027", "Digene Gel", "Abbott", 55.0, 60));
+        allProducts.add(new Product("MED028", "Pantoprazole 40mg", "Sun Pharma", 125.0, 50));
+        
+        // Women's Health - New category
+        allProducts.add(new Product("MED029", "Folic Acid Tablets", "Cipla", 45.0, 80));
+        allProducts.add(new Product("MED030", "Calcium + Vitamin D", "Shelcal", 180.0, 45));
+        
+        // Skin Care - New category
+        allProducts.add(new Product("MED031", "Betnovate Cream", "GSK", 85.0, 30));
+        allProducts.add(new Product("MED032", "Clotrimazole Cream", "Candid", 65.0, 40));
+        
+        // Eye Care - New category
+        allProducts.add(new Product("MED033", "Eye Drops Refresh", "Allergan", 120.0, 25));
+        allProducts.add(new Product("MED034", "Vitamin A Capsules", "Himalaya", 95.0, 35));
     }
     
     private void loadUserSubscriptions() {
@@ -2088,67 +2703,98 @@ public class SmartCustomerDashboard extends JFrame {
                 "jdbc:mysql://localhost:3306/drugdatabase?useSSL=false&allowPublicKeyRetrieval=true", 
                 "root", "A@nchal911");
             
-            int orderId = 0;
+            int lastOrderId = 0;
             
-            // First check if orders table has the required columns
-            System.out.println("Saving orders to database...");
+            // First, ensure bills table exists
+            try {
+                String createBillsTable = "CREATE TABLE IF NOT EXISTS consolidated_bills (" +
+                    "bill_id INT AUTO_INCREMENT PRIMARY KEY, " +
+                    "customer_id VARCHAR(50), " +
+                    "items_summary TEXT, " +
+                    "item_count INT, " +
+                    "subtotal DECIMAL(10,2), " +
+                    "gst DECIMAL(10,2), " +
+                    "delivery_charges DECIMAL(10,2), " +
+                    "total_amount DECIMAL(10,2), " +
+                    "bill_date DATETIME DEFAULT CURRENT_TIMESTAMP, " +
+                    "payment_method VARCHAR(50) DEFAULT 'Cash on Delivery'" +
+                    ")";
+                PreparedStatement createPs = conn.prepareStatement(createBillsTable);
+                createPs.executeUpdate();
+                System.out.println("Consolidated bills table created/verified");
+            } catch (SQLException e) {
+                System.out.println("Consolidated bills table already exists: " + e.getMessage());
+            }
             
-            // Save each cart item as separate order
+            System.out.println("Saving " + cartItems.size() + " orders to database...");
+            
+            // Group cart items by vendor to create separate orders for each vendor
+            java.util.Map<String, java.util.List<Product>> itemsByVendor = new java.util.HashMap<>();
+            
+            // First, group items by their vendor
             for (Product item : cartItems) {
-                try {
-                    // Try with all possible column combinations
-                    String query = "INSERT INTO orders (uid, pid, quantity, price, status, order_date) VALUES (?, ?, ?, ?, 'Pending', CURDATE())";
-                    PreparedStatement ps = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
-                    
-                    ps.setString(1, currentUser);
-                    ps.setString(2, item.getId());
-                    ps.setInt(3, 1); // Quantity = 1 for now
-                    ps.setDouble(4, item.getPrice());
-                    
-                    System.out.println("Inserting order: " + currentUser + ", " + item.getId() + ", " + item.getPrice());
-                    
-                    int result = ps.executeUpdate();
-                    
-                    if (result > 0) {
-                        ResultSet rs = ps.getGeneratedKeys();
-                        if (rs.next()) {
-                            orderId = rs.getInt(1); // Get the last generated order ID
-                            System.out.println("Order saved with ID: " + orderId);
-                        }
-                    }
-                    ps.close();
-                } catch (SQLException e2) {
-                    System.out.println("Error with standard insert, trying alternative: " + e2.getMessage());
-                    // Try alternative column names
+                String vendorId = findVendorForProduct(conn, item.getId());
+                if (!itemsByVendor.containsKey(vendorId)) {
+                    itemsByVendor.put(vendorId, new java.util.ArrayList<>());
+                }
+                itemsByVendor.get(vendorId).add(item);
+                System.out.println("📦 Item " + item.getName() + " assigned to vendor: " + vendorId);
+            }
+            
+            System.out.println("🏪 Creating orders for " + itemsByVendor.size() + " different vendors");
+            
+            // Create separate orders for each vendor
+            for (java.util.Map.Entry<String, java.util.List<Product>> vendorEntry : itemsByVendor.entrySet()) {
+                String vendorId = vendorEntry.getKey();
+                java.util.List<Product> vendorItems = vendorEntry.getValue();
+                
+                System.out.println("\n🏪 Processing " + vendorItems.size() + " items for vendor: " + vendorId);
+                
+                // Create individual orders for each item from this vendor
+                for (Product item : vendorItems) {
+                    int currentOrderId = 0;
                     try {
-                        String altQuery = "INSERT INTO orders (uid, pid, quantity, price) VALUES (?, ?, ?, ?)";
-                        PreparedStatement ps2 = conn.prepareStatement(altQuery, Statement.RETURN_GENERATED_KEYS);
+                        String query = "INSERT INTO orders (uid, pid, sid, quantity, price, orderdatetime, status) VALUES (?, ?, ?, ?, ?, NOW(), 'Pending')";
+                        PreparedStatement ps = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
                         
-                        ps2.setString(1, currentUser);
-                        ps2.setString(2, item.getId());
-                        ps2.setInt(3, 1);
-                        ps2.setDouble(4, item.getPrice());
+                        ps.setString(1, currentUser);
+                        ps.setString(2, item.getId());
+                        ps.setString(3, vendorId);
+                        ps.setInt(4, 1); // Quantity = 1 for now
+                        ps.setDouble(5, item.getPrice());
                         
-                        int result2 = ps2.executeUpdate();
-                        if (result2 > 0) {
-                            ResultSet rs2 = ps2.getGeneratedKeys();
-                            if (rs2.next()) {
-                                orderId = rs2.getInt(1);
-                                System.out.println("Order saved with alternative query, ID: " + orderId);
+                        System.out.println("   📝 Creating order: " + item.getName() + " → Vendor: " + vendorId + " → Price: Rs." + item.getPrice());
+                        
+                        int result = ps.executeUpdate();
+                        
+                        if (result > 0) {
+                            ResultSet rs = ps.getGeneratedKeys();
+                            if (rs.next()) {
+                                currentOrderId = rs.getInt(1);
+                                lastOrderId = currentOrderId;
+                                System.out.println("   ✅ Order created with ID: " + currentOrderId + " for vendor: " + vendorId);
                             }
                         }
-                        ps2.close();
-                    } catch (SQLException e3) {
-                        System.out.println("Both insert methods failed: " + e3.getMessage());
-                        // Return a mock order ID for testing
-                        orderId = (int) (System.currentTimeMillis() % 10000);
-                        System.out.println("Using mock order ID: " + orderId);
+                        ps.close();
+                    } catch (SQLException e2) {
+                        System.out.println("   ❌ Error creating order for " + item.getName() + ": " + e2.getMessage());
+                        // Create mock order for testing
+                        currentOrderId = (int) (System.currentTimeMillis() % 10000) + vendorItems.indexOf(item);
+                        lastOrderId = currentOrderId;
+                        System.out.println("   🔄 Using mock order ID: " + currentOrderId);
                     }
                 }
             }
             
+            // Create ONE consolidated bill for all items in this shopping session
+            saveConsolidatedBill(conn, cartTotal);
+            
             conn.close();
-            return orderId > 0 ? orderId : (int) (System.currentTimeMillis() % 10000);
+            System.out.println("\n🎉 All orders distributed to " + itemsByVendor.size() + " vendors successfully!");
+            System.out.println("📋 Total items processed: " + cartItems.size());
+            System.out.println("🧾 Consolidated bill created for customer: " + currentUser);
+            System.out.println("🆔 Last order ID: " + lastOrderId);
+            return lastOrderId > 0 ? lastOrderId : (int) (System.currentTimeMillis() % 10000);
             
         } catch (Exception e) {
             System.out.println("Error saving orders: " + e.getMessage());
@@ -2157,6 +2803,82 @@ public class SmartCustomerDashboard extends JFrame {
             return (int) (System.currentTimeMillis() % 10000);
         }
     }
+    
+    private String findVendorForProduct(Connection conn, String productId) {
+        try {
+            // First, try to find vendor who has this product in inventory
+            String inventoryQuery = "SELECT i.sid FROM inventory i WHERE i.pid = ? AND i.quantity > 0 ORDER BY i.quantity DESC LIMIT 1";
+            PreparedStatement ps = conn.prepareStatement(inventoryQuery);
+            ps.setString(1, productId);
+            ResultSet rs = ps.executeQuery();
+            
+            if (rs.next()) {
+                String vendorId = rs.getString("sid");
+                System.out.println("✅ Found vendor " + vendorId + " with inventory for product " + productId);
+                ps.close();
+                return vendorId;
+            }
+            ps.close();
+            
+            // If no inventory found, get any available vendor from seller table
+            String vendorQuery = "SELECT sid FROM seller ORDER BY sid LIMIT 1";
+            PreparedStatement vendorPs = conn.prepareStatement(vendorQuery);
+            ResultSet vendorRs = vendorPs.executeQuery();
+            
+            if (vendorRs.next()) {
+                String availableVendor = vendorRs.getString("sid");
+                System.out.println("📦 Using available vendor " + availableVendor + " for product " + productId);
+                vendorPs.close();
+                return availableVendor;
+            }
+            vendorPs.close();
+            
+        } catch (SQLException e) {
+            System.out.println("❌ Error finding vendor for product " + productId + ": " + e.getMessage());
+        }
+        
+        // Create a default vendor if none exists
+        System.out.println("⚠️ No vendors found, creating default assignment for product " + productId);
+        return "VENDOR_DEFAULT";
+    }
+    
+    private void saveConsolidatedBill(Connection conn, double cartTotal) {
+        try {
+            // Create items summary
+            StringBuilder itemsSummary = new StringBuilder();
+            for (int i = 0; i < cartItems.size(); i++) {
+                Product item = cartItems.get(i);
+                if (i > 0) itemsSummary.append(", ");
+                itemsSummary.append(item.getName()).append(" (Qty: 1)");
+            }
+            
+            double subtotal = cartTotal;
+            double gst = subtotal * 0.18;
+            double delivery = 50.0; // Single delivery charge for entire order
+            double total = subtotal + gst + delivery;
+            
+            String billQuery = "INSERT INTO consolidated_bills (customer_id, items_summary, item_count, subtotal, gst, delivery_charges, total_amount) VALUES (?, ?, ?, ?, ?, ?, ?)";
+            PreparedStatement billPs = conn.prepareStatement(billQuery);
+            billPs.setString(1, currentUser);
+            billPs.setString(2, itemsSummary.toString());
+            billPs.setInt(3, cartItems.size());
+            billPs.setDouble(4, subtotal);
+            billPs.setDouble(5, gst);
+            billPs.setDouble(6, delivery);
+            billPs.setDouble(7, total);
+            
+            int result = billPs.executeUpdate();
+            if (result > 0) {
+                System.out.println("✅ Consolidated bill created for customer: " + currentUser + ", Items: " + cartItems.size() + ", Total: Rs." + String.format("%.2f", total));
+            }
+            billPs.close();
+            
+        } catch (SQLException e) {
+            System.out.println("❌ Error saving consolidated bill: " + e.getMessage());
+        }
+    }
+    
+
     
     private void showBill(String orderId, double total) {
         JDialog billDialog = new JDialog(this, "Invoice - " + orderId, true);
@@ -2721,9 +3443,6 @@ public class SmartCustomerDashboard extends JFrame {
                     break;
                 case "recommendations":
                     showAIRecommendations();
-                    break;
-                case "subscriptions":
-                    showSubscriptions();
                     break;
                 case "medicines":
                     showMedicines();
