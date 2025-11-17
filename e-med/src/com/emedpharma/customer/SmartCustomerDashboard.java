@@ -3051,7 +3051,8 @@ public class SmartCustomerDashboard extends JFrame {
                 "jdbc:mysql://localhost:3306/drugdatabase?useSSL=false&allowPublicKeyRetrieval=true", 
                 "root", "A@nchal911");
             
-            String query = "SELECT o.oid, p.pname, o.quantity, o.price, o.orderdatetime, s.sname " +
+            String query = "SELECT o.oid, p.pname, o.quantity, o.price, o.orderdatetime, s.sname, " +
+                          "COALESCE(o.status, 'Pending') as status " +
                           "FROM orders o " +
                           "JOIN product p ON o.pid = p.pid " +
                           "LEFT JOIN seller s ON o.sid = s.sid " +
@@ -3069,7 +3070,7 @@ public class SmartCustomerDashboard extends JFrame {
                     rs.getString("pname"),
                     rs.getInt("quantity"),
                     rs.getDouble("price"),
-                    "Pending",
+                    rs.getString("status"),
                     rs.getString("orderdatetime"),
                     rs.getString("sname")
                 );
@@ -3393,7 +3394,7 @@ public class SmartCustomerDashboard extends JFrame {
         
         if (confirm == JOptionPane.YES_OPTION) {
             dispose();
-            new com.emedpharma.common.MainApplication();
+            System.exit(0);
         }
     }
     

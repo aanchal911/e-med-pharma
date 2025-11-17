@@ -105,9 +105,22 @@ public class OrderDAO {
     }
     
     public boolean updateOrderStatus(int orderId, String status) {
-        // Note: Current DB doesn't have status column, this is for future enhancement
-        System.out.println("Order " + orderId + " status updated to: " + status);
-        return true;
+        String sql = "UPDATE orders SET status = ? WHERE oid = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            
+            ps.setString(1, status);
+            ps.setInt(2, orderId);
+            
+            int rowsUpdated = ps.executeUpdate();
+            if (rowsUpdated > 0) {
+                System.out.println("Order " + orderId + " status updated to: " + status);
+                return true;
+            }
+        } catch (SQLException e) {
+            System.out.println("Error updating order status: " + e.getMessage());
+        }
+        return false;
     }
     
     public List<Order> getAllOrders() {

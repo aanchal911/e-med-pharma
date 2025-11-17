@@ -1,15 +1,42 @@
 package com.emedpharma.vendor;
 
-import javax.swing.*;
-import javax.swing.border.EmptyBorder;
-import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.sql.*;
-import java.util.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GradientPaint;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JDialog;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.SwingConstants;
+import javax.swing.border.EmptyBorder;
 
 public class VendorDashboard extends JFrame {
     private static final Color PRIMARY_GREEN = new Color(27, 94, 32);
@@ -776,7 +803,8 @@ public class VendorDashboard extends JFrame {
             
             System.out.println("Price updated for product: " + pid + " to Rs." + newPrice);
             
-        } catch (Exception e) {
+        } catch (Exception e) 
+        {
             System.out.println("Error updating price: " + e.getMessage());
             e.printStackTrace();
         }
@@ -949,8 +977,35 @@ public class VendorDashboard extends JFrame {
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
             Connection conn = DriverManager.getConnection(
-                "jdbc:mysql://localhost:3306/drugdatabase?useSSL=false&allowPublicKeyRetrieval=true", 
+                "jdbc:mysql://localhost:3306/drugdatabase?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC", 
                 "root", "A@nchal911");
+            
+            System.out.println("Attempting to update order #" + orderId + " to status: " + newStatus);
+            
+            // First, check if the order exists
+            String checkQuery = "SELECT oid FROM orders WHERE oid = ?";
+            PreparedStatement checkPs = conn.prepareStatement(checkQuery);
+            checkPs.setInt(1, orderId);
+            ResultSet checkRs = checkPs.executeQuery();
+            
+            if (!checkRs.next()) {
+                System.out.println("Order #" + orderId + " not found in database");
+                JOptionPane.showMessageDialog(this, 
+                    "Order #" + orderId + " not found!", 
+                    "Error", JOptionPane.ERROR_MESSAGE);
+                conn.close();
+                return;
+            }
+            
+            // Check if status column exists, if not add it
+            try {
+                String addColumnQuery = "ALTER TABLE orders ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'Pending'";
+                PreparedStatement addColumnPs = conn.prepareStatement(addColumnQuery);
+                addColumnPs.executeUpdate();
+                System.out.println("Status column verified/added to orders table");
+            } catch (SQLException e) {
+                System.out.println("Status column handling: " + e.getMessage());
+            }
             
             // Update the order status
             String updateQuery = "UPDATE orders SET status = ? WHERE oid = ?";
@@ -959,24 +1014,46 @@ public class VendorDashboard extends JFrame {
             ps.setInt(2, orderId);
             
             int result = ps.executeUpdate();
-            conn.close();
             
             if (result > 0) {
+                System.out.println(" Order #" + orderId + " status updated to: " + newStatus);
                 JOptionPane.showMessageDialog(this, 
-                    "Order #" + orderId + " has been " + newStatus.toLowerCase() + "!", 
+                    "Order #" + orderId + " has been " + newStatus.toLowerCase() + " successfully!", 
                     "Order " + newStatus, JOptionPane.INFORMATION_MESSAGE);
                 showOrderManagement(); // Refresh the view
             } else {
+                System.out.println(" No rows affected when updating order #" + orderId);
                 JOptionPane.showMessageDialog(this, 
                     "Failed to update order status!", 
                     "Error", JOptionPane.ERROR_MESSAGE);
             }
             
+            conn.close();
+            
+        } catch (SQLException e) {
+            System.out.println("SQL Error updating order status: " + e.getMessage());
+            System.out.println("SQL State: " + e.getSQLState());
+            System.out.println("Error Code: " + e.getErrorCode());
+            e.printStackTrace();
+            
+            // Show user-friendly error message
+            String errorMsg = "Database error: ";
+            if (e.getMessage().contains("Unknown column")) {
+                errorMsg += "Status column missing. Please contact administrator.";
+            } else if (e.getMessage().contains("Connection")) {
+                errorMsg += "Cannot connect to database. Please check connection.";
+            } else {
+                errorMsg += e.getMessage();
+            }
+            
+            JOptionPane.showMessageDialog(this, errorMsg, "Database Error", JOptionPane.ERROR_MESSAGE);
+            
         } catch (Exception e) {
-            System.out.println("Error updating order status: " + e.getMessage());
+            System.out.println("General error updating order status: " + e.getMessage());
+            e.printStackTrace();
             JOptionPane.showMessageDialog(this, 
                 "Error updating order: " + e.getMessage(), 
-                "Database Error", JOptionPane.ERROR_MESSAGE);
+                "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
     
@@ -1480,7 +1557,8 @@ public class VendorDashboard extends JFrame {
         if (confirm == JOptionPane.YES_OPTION) {
             dispose();
             try {
-                new com.emedpharma.common.MainApplication();
+                // Return to main application
+                System.exit(0);
             } catch (Exception ex) {
                 System.exit(0);
             }
