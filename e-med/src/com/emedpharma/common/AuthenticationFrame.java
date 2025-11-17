@@ -49,7 +49,7 @@ public class AuthenticationFrame extends JFrame {
         // Login components
         loginUserId = new JTextField(20);
         loginPassword = new JPasswordField(20);
-        loginUserType = new JComboBox<>(new String[]{"Customer", "Vendor"});
+        loginUserType = new JComboBox<>(new String[]{"Customer", "Vendor", "Admin"});
         
         // Signup components
         signupUserId = new JTextField(20);
@@ -143,18 +143,21 @@ public class AuthenticationFrame extends JFrame {
         
         // Test credentials
         gbc.gridy = 4; gbc.insets = new Insets(10, 10, 10, 10);
-        JLabel testLabel = new JLabel("<html><center><b>Test Credentials:</b><br>" +
-            "Customer: aanchal01/pass123<br>" +
+        JLabel testLabel = new JLabel("<html><center><b>Login Credentials:</b><br><br>" +
+            "<b>Customer:</b> aanchal01 / pass123<br><br>" +
             "<b>Pharmacy Partners:</b><br>" +
-            "Apollo Pharmacy: vendor01/vendor123<br>" +
-            "MedPlus Store: vendor02/vendor456<br>" +
-            "HealthKart Pharmacy: vendor03/health123<br>" +
-            "Guardian Pharmacy: vendor04/guard456<br>" +
-            "Netmeds Store: vendor05/net789<br>" +
-            "1mg Pharmacy: vendor06/onemg321<br>" +
-            "Pharmeasy Store: vendor07/easy654</center></html>");
-        testLabel.setFont(new Font("Arial", Font.PLAIN, 10));
-        testLabel.setForeground(new Color(100, 100, 100));
+            "Apollo: vendor01 / vendor123<br>" +
+            "MedPlus: vendor02 / vendor456<br><br>" +
+            "<b>ADMIN ACCESS:</b><br>" +
+            "<font color='red'>System Admin: admin01 / admin123</font><br>" +
+            "<font color='red'>Support Admin: admin02 / support123</font></center></html>");
+        testLabel.setFont(new Font("Arial", Font.PLAIN, 11));
+        testLabel.setForeground(new Color(80, 80, 80));
+        testLabel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(200, 200, 200)),
+            BorderFactory.createEmptyBorder(10, 10, 10, 10)));
+        testLabel.setBackground(new Color(248, 250, 252));
+        testLabel.setOpaque(true);
         panel.add(testLabel, gbc);
         
         return panel;
@@ -408,6 +411,11 @@ public class AuthenticationFrame extends JFrame {
      * Demonstrates polymorphic behavior - same method works for different user types
      */
     private boolean authenticateUser(String userId, String password, String userType) {
+        // Handle admin authentication separately
+        if ("Admin".equals(userType)) {
+            return authenticateAdmin(userId, password);
+        }
+        
         // POLYMORPHISM: Different table names based on user type
         // This allows same method to work with Customer and Vendor
         String tableName = "Customer".equals(userType) ? "customer" : "seller";
@@ -502,6 +510,44 @@ public class AuthenticationFrame extends JFrame {
         return false;
     }
     
+    private boolean authenticateAdmin(String userId, String password) {
+        try {
+            // Try database authentication first
+            Class.forName("com.mysql.cj.jdbc.Driver");
+            Connection conn = DriverManager.getConnection(
+                "jdbc:mysql://localhost:3306/drugdatabase?useSSL=false&allowPublicKeyRetrieval=true", 
+                "root", "A@nchal911");
+            
+            String query = "SELECT aid, pass FROM admin WHERE aid = ?";
+            PreparedStatement ps = conn.prepareStatement(query);
+            ps.setString(1, userId);
+            ResultSet rs = ps.executeQuery();
+            
+            if (rs.next()) {
+                String dbPassword = rs.getString("pass");
+                conn.close();
+                if (password.equals(dbPassword)) {
+                    System.out.println("✓ Admin authentication successful from database");
+                    return true;
+                }
+            }
+            conn.close();
+        } catch (Exception e) {
+            System.out.println("Database error for admin auth: " + e.getMessage());
+        }
+        
+        // Fallback to hardcoded credentials
+        if (("admin".equals(userId) && "admin123".equals(password)) ||
+            ("admin01".equals(userId) && "admin123".equals(password)) ||
+            ("admin02".equals(userId) && "support123".equals(password))) {
+            System.out.println("✓ Admin authentication successful (fallback)");
+            return true;
+        }
+        
+        System.out.println("✗ Admin authentication failed");
+        return false;
+    }
+    
     /**
      * POLYMORPHISM: Creates different types of users (Customer/Vendor) using same method
      * ENCAPSULATION: Database operations are encapsulated within this method
@@ -566,7 +612,10 @@ public class AuthenticationFrame extends JFrame {
                 // Create and show Vendor dashboard with pharmacy name (inheritance from JFrame)
                 new com.emedpharma.vendor.VendorDashboard(userId, getPharmacyName(userId)).setVisible(true);
                 break;
-
+            case "Admin":
+                // Create and show Admin dashboard
+                new com.emedpharma.admin.AdminDashboard(userId).setVisible(true);
+                break;
         }
     }
     

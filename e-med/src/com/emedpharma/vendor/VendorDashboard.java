@@ -848,6 +848,8 @@ public class VendorDashboard extends JFrame {
                 "jdbc:mysql://localhost:3306/drugdatabase?useSSL=false&allowPublicKeyRetrieval=true", 
                 "root", "A@nchal911");
             
+            System.out.println("📊 Loading orders for vendor: " + currentVendor + " (" + pharmacyName + ")");
+            
             String query = "SELECT o.oid, o.uid, p.pname, o.quantity, o.price, o.orderdatetime, " +
                           "COALESCE(o.status, 'Pending') as status " +
                           "FROM orders o JOIN product p ON o.pid = p.pid " +
@@ -857,7 +859,11 @@ public class VendorDashboard extends JFrame {
             ps.setString(1, currentVendor);
             ResultSet rs = ps.executeQuery();
             
+            int orderCount = 0;
             while (rs.next()) {
+                orderCount++;
+                System.out.println("📦 Order #" + rs.getInt("oid") + " - " + rs.getString("pname") + " - Status: " + rs.getString("status"));
+                
                 JPanel orderCard = createOrderCard(
                     rs.getInt("oid"),
                     rs.getString("uid"),
@@ -871,10 +877,21 @@ public class VendorDashboard extends JFrame {
                 ordersGrid.add(Box.createVerticalStrut(10));
             }
             
+            System.out.println("📊 Total orders found for " + currentVendor + ": " + orderCount);
+            
+            if (orderCount == 0) {
+                JLabel noOrdersLabel = new JLabel("No orders found for " + pharmacyName + " (" + currentVendor + ")");
+                noOrdersLabel.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+                noOrdersLabel.setHorizontalAlignment(SwingConstants.CENTER);
+                noOrdersLabel.setForeground(new Color(100, 100, 100));
+                ordersGrid.add(noOrdersLabel);
+            }
+            
             conn.close();
             
         } catch (Exception e) {
             System.out.println("Error loading orders: " + e.getMessage());
+            e.printStackTrace();
             // Add sample orders if database fails
             addSampleOrderCards(ordersGrid);
         }
@@ -977,13 +994,13 @@ public class VendorDashboard extends JFrame {
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
             Connection conn = DriverManager.getConnection(
-                "jdbc:mysql://localhost:3306/drugdatabase?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC", 
+                "jdbc:mysql://localhost:3306/drugdatabase?useSSL=false&allowPublicKeyRetrieval=true", 
                 "root", "A@nchal911");
             
             System.out.println("Attempting to update order #" + orderId + " to status: " + newStatus);
             
-            // First, check if the order exists
-            String checkQuery = "SELECT oid FROM orders WHERE oid = ?";
+            // First, check if the order exists and belongs to this vendor
+            String checkQuery = "SELECT oid, sid FROM orders WHERE oid = ?";
             PreparedStatement checkPs = conn.prepareStatement(checkQuery);
             checkPs.setInt(1, orderId);
             ResultSet checkRs = checkPs.executeQuery();
@@ -997,35 +1014,68 @@ public class VendorDashboard extends JFrame {
                 return;
             }
             
-            // Check if status column exists, if not add it
+            String orderVendor = checkRs.getString("sid");
+            if (!currentVendor.equals(orderVendor)) {
+                System.out.println("Order #" + orderId + " does not belong to vendor " + currentVendor);
+                JOptionPane.showMessageDialog(this, 
+                    "You can only update orders assigned to your pharmacy!", 
+                    "Access Denied", JOptionPane.WARNING_MESSAGE);
+                conn.close();
+                return;
+            }
+            
+            // Check if status column exists in the table structure
+            boolean statusColumnExists = false;
             try {
-                String addColumnQuery = "ALTER TABLE orders ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'Pending'";
-                PreparedStatement addColumnPs = conn.prepareStatement(addColumnQuery);
-                addColumnPs.executeUpdate();
-                System.out.println("Status column verified/added to orders table");
+                String columnCheckQuery = "SHOW COLUMNS FROM orders LIKE 'status'";
+                PreparedStatement columnPs = conn.prepareStatement(columnCheckQuery);
+                ResultSet columnRs = columnPs.executeQuery();
+                statusColumnExists = columnRs.next();
+                columnRs.close();
+                columnPs.close();
             } catch (SQLException e) {
-                System.out.println("Status column handling: " + e.getMessage());
+                System.out.println("Error checking status column: " + e.getMessage());
+            }
+            
+            // Add status column if it doesn't exist
+            if (!statusColumnExists) {
+                try {
+                    String addColumnQuery = "ALTER TABLE orders ADD COLUMN status VARCHAR(20) DEFAULT 'Pending'";
+                    PreparedStatement addColumnPs = conn.prepareStatement(addColumnQuery);
+                    addColumnPs.executeUpdate();
+                    addColumnPs.close();
+                    System.out.println("Status column added to orders table");
+                } catch (SQLException e) {
+                    System.out.println("Error adding status column: " + e.getMessage());
+                    JOptionPane.showMessageDialog(this, 
+                        "Database schema error. Please contact administrator.", 
+                        "Database Error", JOptionPane.ERROR_MESSAGE);
+                    conn.close();
+                    return;
+                }
             }
             
             // Update the order status
-            String updateQuery = "UPDATE orders SET status = ? WHERE oid = ?";
+            String updateQuery = "UPDATE orders SET status = ? WHERE oid = ? AND sid = ?";
             PreparedStatement ps = conn.prepareStatement(updateQuery);
             ps.setString(1, newStatus);
             ps.setInt(2, orderId);
+            ps.setString(3, currentVendor);
             
             int result = ps.executeUpdate();
+            ps.close();
             
             if (result > 0) {
-                System.out.println(" Order #" + orderId + " status updated to: " + newStatus);
+                System.out.println("✓ Order #" + orderId + " status updated to: " + newStatus);
                 JOptionPane.showMessageDialog(this, 
                     "Order #" + orderId + " has been " + newStatus.toLowerCase() + " successfully!", 
                     "Order " + newStatus, JOptionPane.INFORMATION_MESSAGE);
                 showOrderManagement(); // Refresh the view
             } else {
-                System.out.println(" No rows affected when updating order #" + orderId);
+                System.out.println("✗ No rows affected when updating order #" + orderId);
                 JOptionPane.showMessageDialog(this, 
-                    "Failed to update order status!", 
-                    "Error", JOptionPane.ERROR_MESSAGE);
+                    "Failed to update order status. Order may not exist or belong to another vendor.", 
+                    "Update Failed", JOptionPane.WARNING_MESSAGE);
             }
             
             conn.close();
@@ -1036,23 +1086,30 @@ public class VendorDashboard extends JFrame {
             System.out.println("Error Code: " + e.getErrorCode());
             e.printStackTrace();
             
-            // Show user-friendly error message
+            // Show user-friendly error message based on specific SQL errors
             String errorMsg = "Database error: ";
-            if (e.getMessage().contains("Unknown column")) {
-                errorMsg += "Status column missing. Please contact administrator.";
+            if (e.getMessage().contains("Unknown column 'status'")) {
+                errorMsg += "Order status feature not available. Please contact administrator to update database schema.";
             } else if (e.getMessage().contains("Connection")) {
-                errorMsg += "Cannot connect to database. Please check connection.";
+                errorMsg += "Cannot connect to database. Please check your connection.";
+            } else if (e.getMessage().contains("Access denied")) {
+                errorMsg += "Database access denied. Please check credentials.";
             } else {
-                errorMsg += e.getMessage();
+                errorMsg += "Unexpected database error: " + e.getMessage();
             }
             
             JOptionPane.showMessageDialog(this, errorMsg, "Database Error", JOptionPane.ERROR_MESSAGE);
             
+        } catch (ClassNotFoundException e) {
+            System.out.println("MySQL Driver not found: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, 
+                "MySQL database driver not found. Please ensure mysql-connector-j-9.4.0.jar is in classpath.", 
+                "Driver Error", JOptionPane.ERROR_MESSAGE);
         } catch (Exception e) {
             System.out.println("General error updating order status: " + e.getMessage());
             e.printStackTrace();
             JOptionPane.showMessageDialog(this, 
-                "Error updating order: " + e.getMessage(), 
+                "Unexpected error updating order: " + e.getMessage(), 
                 "Error", JOptionPane.ERROR_MESSAGE);
         }
     }

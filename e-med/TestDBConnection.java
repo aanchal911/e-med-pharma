@@ -1,55 +1,42 @@
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
+import java.sql.*;
 
 public class TestDBConnection {
-    private static final String URL = "jdbc:mysql://localhost:3306/drugdatabase";
-    private static final String USERNAME = "root";
-    private static final String PASSWORD = "A@nchal911";
-    
     public static void main(String[] args) {
-        System.out.println("Testing database connection...");
-        
         try {
-            // Load MySQL driver
+            // Load the MySQL driver
             Class.forName("com.mysql.cj.jdbc.Driver");
             
-            // Attempt connection
-            Connection conn = DriverManager.getConnection(URL, USERNAME, PASSWORD);
+            // Connect to database
+            Connection conn = DriverManager.getConnection(
+                "jdbc:mysql://localhost:3306/drugdatabase?useSSL=false&allowPublicKeyRetrieval=true", 
+                "root", "A@nchal911");
             
-            if (conn != null && !conn.isClosed()) {
-                System.out.println("✅ Database connection successful!");
-                System.out.println("Connected to: " + URL);
-                System.out.println("Database: drugdatabase");
-                
-                // Test a simple query
-                try {
-                    var stmt = conn.createStatement();
-                    var rs = stmt.executeQuery("SELECT COUNT(*) as table_count FROM information_schema.tables WHERE table_schema = 'drugdatabase'");
-                    if (rs.next()) {
-                        System.out.println("Number of tables in database: " + rs.getInt("table_count"));
-                    }
-                    rs.close();
-                    stmt.close();
-                } catch (SQLException e) {
-                    System.out.println("⚠️ Database exists but query failed: " + e.getMessage());
-                }
-                
-                conn.close();
-            } else {
-                System.out.println("❌ Connection is null or closed");
+            System.out.println("Database connected successfully!");
+            
+            // Test queries
+            PreparedStatement ps1 = conn.prepareStatement("SELECT COUNT(*) FROM customer");
+            ResultSet rs1 = ps1.executeQuery();
+            if (rs1.next()) {
+                System.out.println("Total Customers: " + rs1.getInt(1));
             }
             
-        } catch (ClassNotFoundException e) {
-            System.out.println("❌ MySQL driver not found: " + e.getMessage());
-            System.out.println("Make sure mysql-connector-j-9.4.0.jar is in classpath");
-        } catch (SQLException e) {
-            System.out.println("❌ Database connection failed: " + e.getMessage());
-            System.out.println("Possible issues:");
-            System.out.println("- MySQL server not running");
-            System.out.println("- Database 'drugdatabase' doesn't exist");
-            System.out.println("- Wrong username/password");
-            System.out.println("- MySQL not accessible on localhost:3306");
+            PreparedStatement ps2 = conn.prepareStatement("SELECT COUNT(*) FROM seller");
+            ResultSet rs2 = ps2.executeQuery();
+            if (rs2.next()) {
+                System.out.println("Total Vendors: " + rs2.getInt(1));
+            }
+            
+            PreparedStatement ps3 = conn.prepareStatement("SELECT COUNT(*) FROM product");
+            ResultSet rs3 = ps3.executeQuery();
+            if (rs3.next()) {
+                System.out.println("Total Products: " + rs3.getInt(1));
+            }
+            
+            conn.close();
+            
+        } catch (Exception e) {
+            System.out.println("Database connection failed: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }

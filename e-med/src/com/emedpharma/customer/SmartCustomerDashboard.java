@@ -2726,7 +2726,7 @@ public class SmartCustomerDashboard extends JFrame {
                 System.out.println("Consolidated bills table already exists: " + e.getMessage());
             }
             
-            System.out.println("Saving " + cartItems.size() + " orders to database...");
+            System.out.println("📦 Saving " + cartItems.size() + " orders to database for customer: " + currentUser + "...");
             
             // Group cart items by vendor to create separate orders for each vendor
             java.util.Map<String, java.util.List<Product>> itemsByVendor = new java.util.HashMap<>();
@@ -2806,6 +2806,8 @@ public class SmartCustomerDashboard extends JFrame {
     
     private String findVendorForProduct(Connection conn, String productId) {
         try {
+            System.out.println("🔍 Searching for vendor for product: " + productId);
+            
             // First, try to find vendor who has this product in inventory
             String inventoryQuery = "SELECT i.sid FROM inventory i WHERE i.pid = ? AND i.quantity > 0 ORDER BY i.quantity DESC LIMIT 1";
             PreparedStatement ps = conn.prepareStatement(inventoryQuery);
@@ -2833,13 +2835,44 @@ public class SmartCustomerDashboard extends JFrame {
             }
             vendorPs.close();
             
+            // If no vendors in seller table, create some default entries
+            System.out.println("⚠️ No vendors found in seller table, creating default vendor entries...");
+            createDefaultVendors(conn);
+            
         } catch (SQLException e) {
             System.out.println("❌ Error finding vendor for product " + productId + ": " + e.getMessage());
         }
         
-        // Create a default vendor if none exists
-        System.out.println("⚠️ No vendors found, creating default assignment for product " + productId);
-        return "VENDOR_DEFAULT";
+        // Use a round-robin approach to assign vendors if no specific vendor found
+        String[] defaultVendors = {"vendor01", "vendor02", "vendor03"};
+        int vendorIndex = Math.abs(productId.hashCode()) % defaultVendors.length;
+        String assignedVendor = defaultVendors[vendorIndex];
+        System.out.println("🔄 Assigning product " + productId + " to vendor: " + assignedVendor + " (round-robin)");
+        return assignedVendor;
+    }
+    
+    private void createDefaultVendors(Connection conn) {
+        try {
+            String[][] defaultVendors = {
+                {"vendor01", "Apollo Pharmacy", "123 Main St", "9876543210"},
+                {"vendor02", "MedPlus Store", "456 Oak Ave", "9876543211"},
+                {"vendor03", "HealthKart Pharmacy", "789 Pine Rd", "9876543212"}
+            };
+            
+            for (String[] vendor : defaultVendors) {
+                String insertQuery = "INSERT IGNORE INTO seller (sid, sname, pass, address, phno) VALUES (?, ?, 'vendor123', ?, ?)";
+                PreparedStatement ps = conn.prepareStatement(insertQuery);
+                ps.setString(1, vendor[0]);
+                ps.setString(2, vendor[1]);
+                ps.setString(3, vendor[2]);
+                ps.setLong(4, Long.parseLong(vendor[3]));
+                ps.executeUpdate();
+                ps.close();
+                System.out.println("✅ Created default vendor: " + vendor[0] + " - " + vendor[1]);
+            }
+        } catch (SQLException e) {
+            System.out.println("❌ Error creating default vendors: " + e.getMessage());
+        }
     }
     
     private void saveConsolidatedBill(Connection conn, double cartTotal) {
