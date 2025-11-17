@@ -3394,7 +3394,11 @@ public class SmartCustomerDashboard extends JFrame {
         
         if (confirm == JOptionPane.YES_OPTION) {
             dispose();
-            System.exit(0);
+            try {
+                new com.emedpharma.common.MainApplication();
+            } catch (Exception ex) {
+                System.exit(0);
+            }
         }
     }
     

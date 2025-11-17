@@ -1558,7 +1558,7 @@ public class VendorDashboard extends JFrame {
             dispose();
             try {
                 // Return to main application
-                System.exit(0);
+                new com.emedpharma.common.MainApplication();
             } catch (Exception ex) {
                 System.exit(0);
             }
